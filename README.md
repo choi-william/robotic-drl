@@ -4,26 +4,41 @@ This README would normally document whatever steps are necessary to get your app
 
 ### What is this repository for? ###
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* Capstone Project II codebase
+* v1
 
-### How do I get set up? ###
+### Installation Instructions ###
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+#### Python Dependencies ####
 
-### Contribution guidelines ###
+##### Python3 #####
+Linux: `sudo apt-get install python3.6`
+Mac: `brew install python3`
 
-* Writing tests
-* Code review
-* Other guidelines
+##### Tensorflow #####
 
-### Who do I talk to? ###
+Tensorflow is our machine learning library that will handle all the hard ML stuff.
 
-* Repo owner or admin
-* Other community or team contact
+https://www.tensorflow.org/install/
+
+I recommend installing through native-pip
+
+Make sure that all installation is with python3 (eg. use pip3 instead of pip always)
+
+##### TFLearn #####
+
+TFLearn is a wrapper on top of tensorflow that simplifies it even more.
+
+`pip3 install tflearn`
+
+##### OpenAI gym #####
+
+OpenAI gym is our reinforcement learning environment testing framework.
+
+`pip3 install gym`
+
+### Running the code ###
+
+`python3 ddpg.py`
+
+Runs a pendulum environment by default.
