@@ -339,11 +339,13 @@ def main(args):
     with tf.Session() as sess:
 
         env = gym.make(args['env'])
+
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
         env.seed(int(args['random_seed']))
 
         state_dim = env.observation_space.shape[0]
+
         action_dim = env.action_space.shape[0]
         action_bound = env.action_space.high
         # Ensure action bound is symmetric
@@ -393,7 +395,7 @@ if __name__ == '__main__':
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results/tf_ddpg')
 
     parser.set_defaults(render_env=False)
-    parser.set_defaults(use_gym_monitor=True)
+    parser.set_defaults(use_gym_monitor=False)
     
     args = vars(parser.parse_args())
     

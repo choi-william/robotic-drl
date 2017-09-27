@@ -37,8 +37,11 @@ OpenAI gym is our reinforcement learning environment testing framework.
 
 `pip3 install gym`
 
+#### Misc Dependencies ####
+`brew install ffmpeg` - Necessary to show simulation visuals
+
 ### Running the code ###
 
-`python3 ddpg.py`
+`python3 ddpg.py --render-env`
 
 Runs a pendulum environment by default.
