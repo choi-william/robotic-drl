@@ -13,6 +13,7 @@ This README would normally document whatever steps are necessary to get your app
 
 ##### Python3 #####
 Linux: `sudo apt-get install python3.6`
+
 Mac: `brew install python3`
 
 ##### Tensorflow #####
