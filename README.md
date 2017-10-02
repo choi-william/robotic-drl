@@ -46,3 +46,7 @@ OpenAI gym is our reinforcement learning environment testing framework.
 `python3 ddpg.py --render-env`
 
 Runs a pendulum environment by default.
+
+`tensorboard --logdir=robotic-ai/results/tf_ddpg/`
+
+Outputs useful plots in realtime. (run in separate terminal window)

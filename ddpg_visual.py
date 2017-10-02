@@ -76,14 +76,17 @@ class ActorNetwork(object):
 
     def create_actor_network(self):
 
-        inputs = tflearn.input_data(shape=[None, self.s_dim])
+        inputs = tflearn.input_data(shape=[None]+list(self.s_dim))
 
-        net = tflearn.fully_connected(inputs, 400)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-        net = tflearn.fully_connected(net, 300)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
+        net = conv_2d(inputs, 32, 5, activation='relu', regularizer="L2")
+        net = max_pool_2d(net, 2)
+        net = conv_2d(net, 32, 5, activation='relu', regularizer="L2")            
+        net = max_pool_2d(net, 2)
+        net = conv_2d(net, 64, 4, activation='relu', regularizer="L2")
+        net = max_pool_2d(net, 2)
+        net = conv_2d(net, 64, 3, activation='relu', regularizer="L2")
+        net = tflearn.fully_connected(net, 512, activation='linear')
+        net = tflearn.activations.prelu(net)
 
         # Final layer weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
@@ -167,11 +170,17 @@ class CriticNetwork(object):
     def create_critic_network(self):
 
         action = tflearn.input_data(shape=[None, self.a_dim])
+        inputs = tflearn.input_data(shape=[None]+list(self.s_dim))
 
-        inputs = tflearn.input_data(shape=[None, self.s_dim])
-        net = tflearn.fully_connected(inputs, 400)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
+        net = conv_2d(inputs, 32, 5, activation='relu', regularizer="L2")
+        net = max_pool_2d(net, 2)
+        net = conv_2d(net, 32, 5, activation='relu', regularizer="L2")            
+        net = max_pool_2d(net, 2)
+        net = conv_2d(net, 64, 4, activation='relu', regularizer="L2")
+        net = max_pool_2d(net, 2)
+        net = conv_2d(net, 64, 3, activation='relu', regularizer="L2")
+        net = tflearn.fully_connected(net, 512, activation='linear')
+        net = tflearn.activations.prelu(net)
 
         # Add the action tensor in the 2nd hidden layer
         # Use two temp layers to get the corresponding weights and biases
@@ -287,12 +296,12 @@ def train(sess, env, args, actor, critic, actor_noise):
             # Added exploration noise
             #a = actor.predict(np.reshape(s, (1, 3))) + (1. / (1. + i))
 
-            a = actor.predict(np.reshape(s, (1, actor.s_dim))) + actor_noise()
+            a = actor.predict(np.reshape(s, (1,)+(actor.s_dim))) + actor_noise()
 
             s2, r, terminal, info = env.step(a[0])
 
-            replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r,
-                                          terminal, np.reshape(s2, (actor.s_dim,)))
+            replay_buffer.add(s, np.reshape(a, (actor.a_dim,)), r,
+                              terminal, s2)
 
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
@@ -329,6 +338,7 @@ def train(sess, env, args, actor, critic, actor_noise):
             s = s2
             ep_reward += r
 
+            print(j)
             if terminal:
 
                 summary_str = sess.run(summary_ops, feed_dict={
@@ -353,7 +363,7 @@ def main(args):
         tf.set_random_seed(int(args['random_seed']))
         env.seed(int(args['random_seed']))
 
-        state_dim = env.observation_space.shape[0]
+        state_dim = env.observation_space.shape
         action_dim = env.action_space.shape[0]
 
         action_amp = (env.action_space.high-env.action_space.low)/2
@@ -390,14 +400,14 @@ if __name__ == '__main__':
     parser.add_argument('--critic-lr', help='critic network learning rate', default=0.001)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.99)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1000000)
-    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=64)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=500)
+    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=1)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='Pendulum-v0')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=1234)
     parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=50000)
-    parser.add_argument('--max-episode-len', help='max length of 1 episode', default=1000)
+    parser.add_argument('--max-episode-len', help='max length of 1 episode', default=100)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
     parser.add_argument('--monitor-dir', help='directory for storing gym results', default='./results/gym_ddpg')
