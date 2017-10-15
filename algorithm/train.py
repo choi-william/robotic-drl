@@ -8,21 +8,28 @@ The algorithm is tested on the Pendulum-v0 OpenAI gym task
 and developed with tflearn + Tensorflow
 
 Author: Patrick Emami
+
 """
 import tensorflow as tf
 import numpy as np
 import gym
 from gym import wrappers
 import tflearn
-from tflearn.layers.conv import conv_2d, max_pool_2d
 import argparse
 import pprint as pp
+import architectures
+
+import os
+import re
 
 from replay_buffer import ReplayBuffer
 
 # ===========================
 #   Actor and Critic DNNs
 # ===========================
+
+# USAGE
+# python3 train.py --render-env --model-name <name>
 
 class ActorNetwork(object):
     """
@@ -43,7 +50,8 @@ class ActorNetwork(object):
         self.tau = tau
 
         # Actor Network
-        self.inputs, self.out, self.scaled_out = self.create_actor_network()
+        with tf.variable_scope('actor_model'):
+            self.inputs, self.out, self.scaled_out = self.create_actor_network()
 
         self.network_params = tf.trainable_variables()
 
@@ -75,23 +83,9 @@ class ActorNetwork(object):
             self.network_params) + len(self.target_network_params)
 
     def create_actor_network(self):
-
-        inputs = tflearn.input_data(shape=[None, self.s_dim])
-
-        net = tflearn.fully_connected(inputs, 400)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-        net = tflearn.fully_connected(net, 300)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-
-        # Final layer weights are init to Uniform[-3e-3, 3e-3]
-        w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        out = tflearn.fully_connected(
-            net, self.a_dim, activation='tanh', weights_init=w_init)
-        # Scale output to -action_bound to action_bound
-        scaled_out = tf.multiply(out, self.action_amp)
-        scaled_out = tf.add(out,self.action_mid)
+        arch = 'architecture_actor_v0'
+        get_net_method = getattr(architectures, arch)
+        inputs, out, scaled_out = get_net_method(self.s_dim, self.a_dim, self.action_amp, self.action_mid)
         return inputs, out, scaled_out
 
     def train(self, inputs, a_gradient):
@@ -154,8 +148,7 @@ class CriticNetwork(object):
 
         # Define loss and optimization Op
         self.loss = tflearn.mean_square(self.predicted_q_value, self.out)
-        self.optimize = tf.train.AdamOptimizer(
-            self.learning_rate).minimize(self.loss)
+        self.optimize = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
         # Get the gradient of the net w.r.t. the action.
         # For each action in the minibatch (i.e., for each x in xs),
@@ -165,26 +158,9 @@ class CriticNetwork(object):
         self.action_grads = tf.gradients(self.out, self.action)
 
     def create_critic_network(self):
-
-        action = tflearn.input_data(shape=[None, self.a_dim])
-
-        inputs = tflearn.input_data(shape=[None, self.s_dim])
-        net = tflearn.fully_connected(inputs, 400)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-
-        # Add the action tensor in the 2nd hidden layer
-        # Use two temp layers to get the corresponding weights and biases
-        t1 = tflearn.fully_connected(net, 300)
-        t2 = tflearn.fully_connected(action, 300)
-
-        net = tflearn.activation(
-            tf.matmul(net, t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
-
-        # linear layer connected to 1 output representing Q(s,a)
-        # Weights are init to Uniform[-3e-3, 3e-3]
-        w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        out = tflearn.fully_connected(net, 1, weights_init=w_init)
+        arch = 'architecture_critic_v0'
+        get_net_method = getattr(architectures, arch)
+        inputs, action, out = get_net_method(self.s_dim, self.a_dim)
         return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
@@ -269,6 +245,14 @@ def train(sess, env, args, actor, critic, actor_noise):
     actor.update_target_network()
     critic.update_target_network()
 
+    # Saver
+    actor_model_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="actor_model")
+    saver = tf.train.Saver(actor_model_variables)
+
+    if args['load_model']:
+        saver.restore(sess, args['model_dir']+'/'+args['model_name']+'/'+args['model_name'])
+
+
     # Initialize replay memory
     replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
 
@@ -278,6 +262,10 @@ def train(sess, env, args, actor, critic, actor_noise):
 
         ep_reward = 0
         ep_ave_max_q = 0
+
+        if i % 10 == 0:
+            saver.save(sess, args['model_dir']+'/'+args['model_name'] + '/' + args['model_name'])
+            print('Saved updated model\n')
 
         for j in range(int(args['max_episode_len'])):
 
@@ -345,6 +333,20 @@ def train(sess, env, args, actor, critic, actor_noise):
 
 def main(args):
 
+    #if no model name is set, create a unique one
+    if args['model_name'] == 'unnamed':
+        maxnum = -1
+        for name in os.listdir(args['model_dir']):
+            if name.startswith('unnamed'):
+                num = int(re.search(r'\d+$', name).group(0)) #find ending number of file name
+                if num > maxnum:
+                    maxnum = num
+        args['model_name'] = 'unnamed' + str(maxnum+1)
+
+    model_dir = args['model_dir']+'/'+args['model_name']
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+
     with tf.Session() as sess:
 
         env = gym.make(args['env'])
@@ -369,6 +371,7 @@ def main(args):
                                actor.get_num_trainable_vars())
         
         actor_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_dim))
+
 
         if args['use_gym_monitor']:
             if not args['render_env']:
@@ -400,12 +403,17 @@ if __name__ == '__main__':
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=1000)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
-    parser.add_argument('--monitor-dir', help='directory for storing gym results', default='./results/gym_ddpg')
-    parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results/tf_ddpg')
+    parser.add_argument('--monitor-dir', help='directory for storing gym results', default='../results/gym_ddpg')
+    parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='../results/tf_ddpg')
+    parser.add_argument('--model-dir', help='directory for storing saved models', default='../results/models')
+    parser.add_argument('--model-name', help='name of the saved model', default='unnamed')
+    parser.add_argument('--load-model', help='name of the saved model', action='store_true')
 
-    parser.set_defaults(render_env=False)
+
+    parser.set_defaults(render_env=True)
     parser.set_defaults(use_gym_monitor=False)
-    
+    parser.set_defaults(load_model=False)
+
     args = vars(parser.parse_args())
     
     pp.pprint(args)

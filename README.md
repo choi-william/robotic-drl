@@ -7,6 +7,32 @@ This README would normally document whatever steps are necessary to get your app
 * Capstone Project II codebase
 * v1
 
+### Files ###
+
+#### algorithm/train ####
+
+Trains an actor neural network based on the specified simulation
+
+#### algorithm/execute ####
+
+Executes a given actor neural network model in the specified simulation
+
+#### algorithm/imitate ####
+
+Takes in state-action pairs to train an actor neural network.
+
+#### algorithm/replay_buffer ####
+
+A supporting file to implement a replay buffer
+
+#### algorithm/architectures ####
+
+A supporting file that specified neural network architectures so they can be dynamically loaded.
+
+#### other/ddpg_visual ####
+
+An experimental training file that takes in a pixel input
+
 ### Installation Instructions ###
 
 #### Python Dependencies ####
