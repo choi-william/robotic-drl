@@ -29,6 +29,10 @@ A supporting file to implement a replay buffer
 
 A supporting file that specified neural network architectures so they can be dynamically loaded.
 
+#### camera/capture ####
+
+A simple program to capture images from a camera
+
 #### other/ddpg_visual ####
 
 An experimental training file that takes in a pixel input
@@ -63,6 +67,14 @@ TFLearn is a wrapper on top of tensorflow that simplifies it even more.
 OpenAI gym is our reinforcement learning environment testing framework.
 
 `pip3 install gym`
+
+##### OpenCV #####
+
+Installation instructions for ubuntu can be found here:
+
+https://www.pyimagesearch.com/2016/10/24/ubuntu-16-04-how-to-install-opencv/
+
+For mac, should be similar...hopefully
 
 #### Misc Dependencies ####
 `brew install ffmpeg` - Necessary to show simulation visuals

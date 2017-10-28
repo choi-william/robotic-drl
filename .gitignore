@@ -1,1 +1,4 @@
 results/
+.idea/
+algorithm/__pycache__/
+camera/test.png
