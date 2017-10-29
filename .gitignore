@@ -3,3 +3,4 @@ results/
 algorithm/__pycache__/
 camera/output/
 camera/test*.png
+camera/capture*.png

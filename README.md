@@ -31,7 +31,12 @@ A supporting file that specified neural network architectures so they can be dyn
 
 #### camera/capture ####
 
-A simple program to capture images from a camera
+A simple program to capture images from a camera.
+Also includes tools for undistorting a single image and tracking the position of a yellow object
+
+#### camera/calibrate ####
+
+A program which uses a set of 10+ images to obtain camera parameters used to remove lens distortion
 
 #### other/ddpg_visual ####
 
