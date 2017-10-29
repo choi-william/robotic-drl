@@ -1,4 +1,5 @@
 results/
 .idea/
 algorithm/__pycache__/
-camera/test.png
+camera/output/
+camera/test*.png
