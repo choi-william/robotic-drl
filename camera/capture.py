@@ -80,40 +80,39 @@ def create_trackbars():
 
 
 ### Draw a target icon on the position of the object
-def draw_object(img, x, y):
+def draw_object(img, x, y, colour):
 
-    colour = (0,255,0)
-
-    cv2.circle(img, (x,y), 20, colour, 2)
-    if (y - 25 > 0):
+    cv2.circle(img, (x, y), 20, colour, 2)
+    if y - 25 > 0:
         cv2.line(img, (x, y), (x, y - 25), colour, 2)
     else:
         cv2.line(img, (x, y), (x, 0), colour, 2)
-    if (y + 25 < frame_height):
+    if y + 25 < frame_height:
         cv2.line(img, (x, y), (x, y + 25), colour, 2)
     else:
         cv2.line(img, (x, y), (x, frame_height), colour, 2)
-    if (x - 25 > 0):
+    if x - 25 > 0:
         cv2.line(img, (x, y), (x - 25, y), colour, 2)
     else:
         cv2.line(img, (x, y), (0, y), colour, 2)
-    if (x + 25 < frame_width):
+    if x + 25 < frame_width:
         cv2.line(img, (x, y), (x + 25, y), colour, 2)
     else:
         cv2.line(img, (x, y), (frame_width, y), colour, 2)
 
-    cv2.putText(img, x.__str__() + "," + y.__str__(), (x, y + 30), 1, 1, colour, 2)
+    cv2.putText(img, x.__str__() + ", " + y.__str__(), (x, y + 35), 1, 1, colour, 2)
 
 
-### Returns x and y coordinates in pixels from the top left corner and an angle in degrees clockwise from the up direction
+### Returns x and y coordinates in pixels from the bottom right corner and
+### an angle in degrees clockwise from the up direction
 def track_object(img):
-    x = 0
-    y = 0
-    angle = 0
+    x_main = 0
+    y_main = 0
+    angle_main = 0
 
     ## Change from RGB to HSV
 
-    imgHsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     ## Colour mask in HSV
     h_min = cv2.getTrackbarPos('hue min', 'bars')
@@ -122,38 +121,53 @@ def track_object(img):
     s_max = cv2.getTrackbarPos('saturation max', 'bars')
     v_min = cv2.getTrackbarPos('value min', 'bars')
     v_max = cv2.getTrackbarPos('value max', 'bars')
-    colourMaskLower = np.array([h_min,s_min,v_min])
-    colourMaskUpper = np.array([h_max,s_max,v_max])
+    colour_mask_lower = np.array([h_min, s_min, v_min])
+    colour_mask_upper = np.array([h_max, s_max, v_max])
 
-    colourMask = cv2.inRange(imgHsv, colourMaskLower, colourMaskUpper)
+    colour_mask = cv2.inRange(img_hsv, colour_mask_lower, colour_mask_upper)
 
-    imgColourMasked = cv2.bitwise_and(img, img, mask=colourMask)
+    img_colour_masked = cv2.bitwise_and(img, img, mask=colour_mask)
 
-    cv2.imshow('imgColourMasked', imgColourMasked)
+    cv2.imshow('img_colour_masked', img_colour_masked)
 
     ## Use opening (combined erosion and dilation) to remove noise
 
-    kernel = np.ones((7,7), np.uint8)
-    opening = cv2.morphologyEx(imgColourMasked, cv2.MORPH_OPEN, kernel)
+    kernel = np.ones((7, 7), np.uint8)
+    opening = cv2.morphologyEx(img_colour_masked, cv2.MORPH_OPEN, kernel)
 
     cv2.imshow('opening', opening)
 
     ## Find contours
-    imgGray = cv2.cvtColor(opening, cv2.COLOR_BGR2GRAY)
+    img_gray = cv2.cvtColor(opening, cv2.COLOR_BGR2GRAY)
 
-    image, contours, hierarchy = cv2.findContours(imgGray, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    image, contours, hierarchy = cv2.findContours(img_gray, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
 
-    if (len(contours) is 0):
+    if len(contours) is 0:
         print("no objects found")
-        return (x, y, angle)
+        return x_main, y_main, angle_main
+
+    largest_area = 0
+    largest_contour = 0
 
     if len(contours) < 10:
+        ## Analyze objects to find the largest
         for i in range(len(contours)):
-            M = cv2.moments(contours[i])
-            x = int(M['m10'] / M['m00'])
-            y = int(M['m01'] / M['m00'])
             area = cv2.contourArea(contours[i])
-            draw_object(img, x, y)
+            if area > largest_area:
+                largest_area = area
+                largest_contour = i
+
+        ## Draw objects
+        for i in range(len(contours)):
+            m = cv2.moments(contours[i])
+            x = int(m['m10'] / m['m00'])
+            y = int(m['m01'] / m['m00'])
+            if i == largest_contour:
+                draw_object(img, x, y, (0, 255, 0))
+                x_main = x
+                y_main = y
+            else:
+                draw_object(img, x, y, (0, 0, 255))
     else:
         print("Too many objects found!")
 
@@ -161,9 +175,9 @@ def track_object(img):
 
     ## Other code used for experimenting, don't delete just yet
 
-    # imgGray = cv2.cvtColor(imgColourMasked, cv2.COLOR_BGR2GRAY)
+    # img_gray = cv2.cvtColor(img_colour_masked, cv2.COLOR_BGR2GRAY)
     #
-    # edges = cv2.Canny(imgGray, minEdgeVal, maxEdgeVal)
+    # edges = cv2.Canny(img_gray, minEdgeVal, maxEdgeVal)
     #
     # cv2.imshow('edges',edges)
     # cv2.waitKey(1)
@@ -192,7 +206,8 @@ def track_object(img):
     # cv2.imshow('approx', img3)
     # cv2.waitKey(1)
 
-    return (x, y, angle)
+    return x_main, y_main, angle_main
+
 
 #
 # Main
@@ -200,7 +215,6 @@ def track_object(img):
 # Captures and image when no flags
 # '-u' undistorts an image
 # '-d' detects a yellow object
-
 if __name__ == '__main__':
     import sys
     import getopt
