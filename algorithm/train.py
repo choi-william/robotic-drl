@@ -13,6 +13,7 @@ Author: Patrick Emami
 import tensorflow as tf
 import numpy as np
 import gym
+import gymdrl
 from gym import wrappers
 import tflearn
 import argparse
@@ -29,7 +30,7 @@ from replay_buffer import ReplayBuffer
 # ===========================
 
 # USAGE
-# python3 train.py --render-env --model-name <name>
+# python3 train.py --env Membrane-v0 --render-env --model-name name
 
 class ActorNetwork(object):
     """
