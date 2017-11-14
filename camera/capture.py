@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Camera settings
-camera_port = 0
+camera_port = 1
 frame_width = 640
 frame_height = 480
 # Frames before capture to allow for automatic white balance
@@ -146,6 +146,8 @@ def track_object(img):
         print("no objects found")
         return x_main, y_main, angle_main
 
+    epsilon = 1e-4
+
     largest_area = 0
     largest_contour = 0
 
@@ -160,14 +162,16 @@ def track_object(img):
         ## Draw objects
         for i in range(len(contours)):
             m = cv2.moments(contours[i])
+            if m['m00'] < epsilon:
+                continue
             x = int(m['m10'] / m['m00'])
             y = int(m['m01'] / m['m00'])
             if i == largest_contour:
                 draw_object(img, x, y, (0, 255, 0))
                 x_main = x
                 y_main = y
-            else:
-                draw_object(img, x, y, (0, 0, 255))
+            # else:
+            #     draw_object(img, x, y, (0, 0, 255))
     else:
         print("Too many objects found!")
 
@@ -214,61 +218,81 @@ def track_object(img):
 #
 # Captures and image when no flags
 # '-u' undistorts an image
-# '-d' detects a yellow object
+# '-t' tracks a yellow object, use '-u' together to also undistort
 if __name__ == '__main__':
     import sys
     import getopt
 
-    args, img_mask = getopt.getopt(sys.argv[1:], 'ud')
+    args, img_mask = getopt.getopt(sys.argv[1:], 'ut')
     args = dict(args)
 
     file = "capture"
     ext = ".png"
 
     # Hardcode with sample values for now
-    camera_matrix = np.array([[532.79534539, 0., 342.4582558],
-                              [0., 532.91926174, 233.90061186],
-                              [0., 0., 1.0]])
-
-    dist_coefs = np.array([-2.81085949e-01,
-                           2.72559023e-02,
-                           1.21667006e-03,
-                           -1.34205532e-04,
-                           1.58517893e-01])
+    # Base1 values:
+    camera_matrix = np.array([[ 786.08925465,    0.        ,  327.54944649],
+                              [   0.        ,  789.50593105,  223.37587648],
+                              [   0.        ,    0.        ,    1.        ]])
+    dist_coefs = np.array([4.10344222e-01,
+                           -3.49531706e+00,
+                           -1.44480264e-03,
+                           -4.57970740e-03,
+                           7.27633486e+00])
+    # ivan's laptop values:
+    # camera_matrix = np.array([[532.79534539, 0., 342.4582558],
+    #                           [0., 532.91926174, 233.90061186],
+    #                           [0., 0., 1.0]])
+    #
+    # dist_coefs = np.array([-2.81085949e-01,
+    #                        2.72559023e-02,
+    #                        1.21667006e-03,
+    #                        -1.34205532e-04,
+    #                        1.58517893e-01])
 
     u_flag = args.get('-u')
-    d_flag = args.get('-d')
+    t_flag = args.get('-t')
 
-    if u_flag is not None:
-        infile = cv2.imread(file + ext)
-        output = undistort(infile, camera_matrix, dist_coefs)
-        cv2.imwrite(file + "_undistorted" + ext, output)
-    if d_flag is not None:
+    if t_flag is not None:
         myCamera = init_camera()
         create_trackbars()
         while True:
             camera_capture = capture_frame(myCamera)
+            if u_flag is not None:
+                camera_capture = undistort(camera_capture, camera_matrix, dist_coefs)
             track_object(camera_capture)
 
             cv2.imshow('img', camera_capture)
             cv2.waitKey(1)
-
+    if u_flag is not None:
+        infile = cv2.imread(file + ext)
+        output = undistort(infile, camera_matrix, dist_coefs)
+        cv2.imwrite(file + "_undistorted" + ext, output)
     else:
-        index = 0
-        infile = cv2.imread(file + index.__str__() + ext)
-
-        while infile is not None:
-            index += 1
-            infile = cv2.imread(file + index.__str__() + ext)
-
         myCamera = init_camera()
         camera_skip_frames(myCamera)
 
-        camera_capture = capture_frame(myCamera)
+        print('With the focus on the image window, press \'s\' to capture or \'q\' to quit...')
 
-        cv2.imwrite(file + index.__str__() + ext, camera_capture)
+        while True:
+            camera_capture = capture_frame(myCamera)
 
-        cv2.imshow('img', camera_capture)
-        cv2.waitKey(1000)
+            cv2.imshow('img', camera_capture)
+
+            in_read = cv2.waitKey(1) & 0xFF
+            if in_read == ord('s'): # save on pressing 's'
+                index = 0
+                infile = cv2.imread(file + index.__str__() + ext)
+                # Make sure we create a new file
+                while infile is not None:
+                    index += 1
+                    infile = cv2.imread(file + index.__str__() + ext)
+
+                filename = file + index.__str__() + ext
+                cv2.imwrite(filename, camera_capture)
+                print('saved to: ' + filename)
+            elif in_read == ord('q'):
+                cv2.destroyAllWindows()
+                break
 
         myCamera.release()
