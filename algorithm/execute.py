@@ -2,13 +2,14 @@ import tensorflow as tf
 import numpy as np
 import gym
 from gym import wrappers
+import gymdrl
 import tflearn
 import argparse
 import pprint as pp
 import architectures
 
 # USAGE
-# python3 execute.py --render-env --model-name <name>
+# python3 execute.py --render-env --model-name membrane_test2
 
 class ActorNetwork(object):
     """

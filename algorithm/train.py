@@ -30,7 +30,7 @@ from replay_buffer import ReplayBuffer
 # ===========================
 
 # USAGE
-# python3 train.py --env Membrane-v0 --render-env --model-name name
+# python3 train.py --env Membrane-v0 --render-env --output-name membrane_test2
 
 class ActorNetwork(object):
     """
@@ -240,7 +240,7 @@ def train(sess, env, args, actor, critic, actor_noise):
     summary_ops, summary_vars = build_summaries()
 
     sess.run(tf.global_variables_initializer())
-    writer = tf.summary.FileWriter(args['summary_dir'], sess.graph)
+    writer = tf.summary.FileWriter(args['summary_dir']+'/'+args['output_name'], sess.graph)
 
     # Initialize target network weights
     actor.update_target_network()
@@ -250,8 +250,8 @@ def train(sess, env, args, actor, critic, actor_noise):
     actor_model_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="actor_model")
     saver = tf.train.Saver(actor_model_variables)
 
-    if args['load_model']:
-        saver.restore(sess, args['model_dir']+'/'+args['model_name']+'/'+args['model_name'])
+    if args['input_name'] is not None:
+        saver.restore(sess, args['model_dir']+'/'+args['input_name']+'/'+args['input_name'])
 
 
     # Initialize replay memory
@@ -265,7 +265,7 @@ def train(sess, env, args, actor, critic, actor_noise):
         ep_ave_max_q = 0
 
         if i % 10 == 0:
-            saver.save(sess, args['model_dir']+'/'+args['model_name'] + '/' + args['model_name'])
+            saver.save(sess, args['model_dir']+'/'+args['output_name'] + '/' + args['output_name'])
             print('Saved updated model\n')
 
         for j in range(int(args['max_episode_len'])):
@@ -278,6 +278,7 @@ def train(sess, env, args, actor, critic, actor_noise):
 
             a = actor.predict(np.reshape(s, (1, actor.s_dim))) + actor_noise()
 
+            a = np.clip(a, env.action_space.low, env.action_space.high)
             s2, r, terminal, info = env.step(a[0])
 
             replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r,
@@ -335,16 +336,16 @@ def train(sess, env, args, actor, critic, actor_noise):
 def main(args):
 
     #if no model name is set, create a unique one
-    if args['model_name'] == 'unnamed':
+    if args['output_name'] == 'unnamed':
         maxnum = -1
         for name in os.listdir(args['model_dir']):
             if name.startswith('unnamed'):
                 num = int(re.search(r'\d+$', name).group(0)) #find ending number of file name
                 if num > maxnum:
                     maxnum = num
-        args['model_name'] = 'unnamed' + str(maxnum+1)
+        args['output_name'] = 'unnamed' + str(maxnum+1)
 
-    model_dir = args['model_dir']+'/'+args['model_name']
+    model_dir = args['model_dir']+'/'+args['output_name']
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
@@ -361,7 +362,6 @@ def main(args):
 
         action_amp = (env.action_space.high-env.action_space.low)/2
         action_mid = (env.action_space.high+env.action_space.low)/2
-
 
         actor = ActorNetwork(sess, state_dim, action_dim, action_amp, action_mid,
                              float(args['actor_lr']), float(args['tau']))
@@ -407,13 +407,12 @@ if __name__ == '__main__':
     parser.add_argument('--monitor-dir', help='directory for storing gym results', default='../results/gym_ddpg')
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='../results/tf_ddpg')
     parser.add_argument('--model-dir', help='directory for storing saved models', default='../results/models')
-    parser.add_argument('--model-name', help='name of the saved model', default='unnamed')
-    parser.add_argument('--load-model', help='name of the saved model', action='store_true')
+    parser.add_argument('--output-name', help='name of the saved model', default='unnamed')
+    parser.add_argument('--input-name', help='name of the saved model', default=None)
 
 
     parser.set_defaults(render_env=True)
     parser.set_defaults(use_gym_monitor=False)
-    parser.set_defaults(load_model=False)
 
     args = vars(parser.parse_args())
     
