@@ -39,7 +39,7 @@ if __name__ == '__main__':
     args.setdefault('--debug', './output/')
     args.setdefault('--square_size', 1.0)
     if not img_mask:
-        img_mask = 'data/ivan2/test*.png'  # default
+        img_mask = 'data/base2/capture*.png'  # default
     else:
         img_mask = img_mask[0]
 
@@ -94,8 +94,8 @@ if __name__ == '__main__':
     rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (w, h), None, None)
 
     print("\nRMS:", rms)
-    print("camera matrix:\n", camera_matrix)
-    print("distortion coefficients: ", dist_coefs.ravel())
+    print("camera matrix:\n", repr(camera_matrix))
+    print("distortion coefficients: ", repr(dist_coefs.ravel()))
 
     # undistort the image with the calibration
     print('')
