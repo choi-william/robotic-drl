@@ -304,6 +304,7 @@ def track_objects(img, track_params, show_opening=False):
 #     -> while in this mode, press 's' to output the current parameters to 'tracking/object#.json'
 #     -> 'r' to reset trackbars
 #     -> 'q' to quit
+#     -> '--load_params' - load previous parameters
 # '-a' runs code for the arena
 # '--camera_config <filename>' use a custom camera configuration
 #
@@ -317,14 +318,14 @@ if __name__ == '__main__':
     args, img_mask = getopt.getopt(sys.argv[1:], 'uta', ['camera_config=', 'load_params='])
     args = dict(args)
     args.setdefault('--camera_config', 'config/camera_arena.json')
-    args.setdefault('--ouc_params', 'tracking/paper_green.json')
-    args.setdefault('--ouc_top_params', 'tracking/paper_blue.json')
-    args.setdefault('--ouc_bottom_params', 'tracking/paper_red.json')
-    args.setdefault('--actuator_params', 'tracking/paper_purple.json')
-    # args.setdefault('--ouc_params', 'tracking/yellow_block.json')
-    # args.setdefault('--ouc_top_params', 'tracking/blue_top.json')
-    # args.setdefault('--ouc_bottom_params', 'tracking/green_bottom.json')
-    # args.setdefault('--actuator_params', 'tracking/red_actuator.json')
+    # args.setdefault('--ouc_params', 'tracking/paper_green.json')
+    # args.setdefault('--ouc_top_params', 'tracking/paper_blue.json')
+    # args.setdefault('--ouc_bottom_params', 'tracking/paper_red.json')
+    # args.setdefault('--actuator_params', 'tracking/paper_purple.json')
+    args.setdefault('--ouc_params', 'tracking/yellow_block.json')
+    args.setdefault('--ouc_top_params', 'tracking/green_block_top.json')
+    args.setdefault('--ouc_bottom_params', 'tracking/red_block_bottom.json')
+    args.setdefault('--actuator_params', 'tracking/blue_actuator.json')
 
     camera_config = CameraConfig()
     try:
