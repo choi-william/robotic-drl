@@ -31,8 +31,11 @@ A supporting file that specified neural network architectures so they can be dyn
 
 #### camera/capture ####
 
-A simple program to capture images from a camera.
-Also includes tools for undistorting a single image and tracking the position of a yellow object
+A simple program to capture images from a camera, and includes several flags:
+
+- -u: Undistorts a single image and tracking the position of a yellow object
+- -t: Performs object tracking and provides sliders to tune. 's' can be pressed to save the parameters
+- -a: Launches tracking which can be used in the arena. Also uses various flags for custom parameter loading
 
 #### camera/calibrate ####
 
