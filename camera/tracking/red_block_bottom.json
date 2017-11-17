@@ -1,6 +1,6 @@
 {
-    "h_max": 11,
-    "h_min": 0,
+    "h_max": 190,
+    "h_min": 159,
     "kernel_size": 5,
     "s_max": 255,
     "s_min": 132,

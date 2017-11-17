@@ -79,6 +79,11 @@ def init_camera(camera_conf):
     # NOTE: these parameters seem to set the camera to predefined frame sizes NOT exact dimensions
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_conf.frame_height)
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, camera_conf.frame_width)
+    # camera.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 0) - no work
+    # camera.set(cv2.CAP_PROP_WHITE_BALANCE_RED_V, 0) - no work
+    # camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1024) - no set false :(
+    # camera.set(cv2.CAP_PROP_XI_AUTO_WB, False) - no work
+    # camera.set(cv2.CAP_PROP_CONTRAST,255)  # works, but exposure is still a problem
 
     if not camera.isOpened():
         print("Error: No camera connected at port " + camera_conf.camera_port.__str__())
@@ -138,7 +143,7 @@ def create_trackbars(camera_conf, track_params):
 
 
 # Draw a target icon on the position of the object
-def draw_object(img, x, y, colour, camera_conf, size=1.0):
+def draw_crosshair(img, x, y, colour, camera_conf, size=1.0):
 
     cv2.circle(img, (x, y), (int)(20*size), colour, (int)(2*size))
     if y - (int)(25*size) > 0:
@@ -159,6 +164,10 @@ def draw_object(img, x, y, colour, camera_conf, size=1.0):
         cv2.line(img, (x, y), (camera_conf.frame_width, y), colour, (int)(2*size))
 
     cv2.putText(img, x.__str__() + ", " + y.__str__(), (x, y + 35), 1, 1*size, colour, (int)(2*size))
+
+
+def draw_box(img, x1, y1, x2, y2, colour, thickness):
+    cv2.rectangle(img,(x1,y1),(x2,y2),colour,thickness)
 
 
 def find_largest(object_list):
@@ -221,10 +230,22 @@ def track_objects(img, track_params, show_opening=False):
     img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # Colour mask in HSV
-    colour_mask_lower = np.array([track_params.h_min, track_params.s_min, track_params.v_min])
-    colour_mask_upper = np.array([track_params.h_max, track_params.s_max, track_params.v_max])
+    # Handle going above 180:
+    if track_params.h_max > 180:
+        colour_mask_lower1 = np.array([0, track_params.s_min, track_params.v_min])
+        colour_mask_upper1 = np.array([track_params.h_max%180, track_params.s_max, track_params.v_max])
+        colour_mask_lower2 = np.array([track_params.h_min%180, track_params.s_min, track_params.v_min])
+        colour_mask_upper2 = np.array([180, track_params.s_max, track_params.v_max])
 
-    colour_mask = cv2.inRange(img_hsv, colour_mask_lower, colour_mask_upper)
+        colour_mask1 = cv2.inRange(img_hsv, colour_mask_lower1, colour_mask_upper1)
+        colour_mask2 = cv2.inRange(img_hsv, colour_mask_lower2, colour_mask_upper2)
+        colour_mask = cv2.bitwise_or(colour_mask1, colour_mask2)
+
+    else:
+        colour_mask_lower = np.array([track_params.h_min, track_params.s_min, track_params.v_min])
+        colour_mask_upper = np.array([track_params.h_max, track_params.s_max, track_params.v_max])
+
+        colour_mask = cv2.inRange(img_hsv, colour_mask_lower, colour_mask_upper)
 
     img_colour_masked = cv2.bitwise_and(img, img, mask=colour_mask)
 
@@ -393,11 +414,11 @@ if __name__ == '__main__':
             # Draw objects
             for i in range(len(object_list)):
                 if i == largest_object:
-                    draw_object(camera_capture, object_list[i][0], object_list[i][1], (0, 255, 0), camera_config)
+                    draw_crosshair(camera_capture, object_list[i][0], object_list[i][1], (0, 255, 0), camera_config)
                     x_main = object_list[i][0]
                     y_main = object_list[i][1]
                 else:
-                    draw_object(camera_capture, object_list[i][0], object_list[i][1], (0, 0, 255), camera_config)
+                    draw_crosshair(camera_capture, object_list[i][0], object_list[i][1], (0, 0, 255), camera_config)
 
             cv2.putText(camera_capture, 'Objects found: ' + len(object_list).__str__(), (0, 30), 2, 1, (0, 255, 0), 2)
 
@@ -453,13 +474,23 @@ if __name__ == '__main__':
 
         # Calculate bounding boxes for actuator positions, assumption: x1 < x2, y1 < y2
         # Current idea: take middle square of size frame height
-        # Cut into 5 pieces - not yet implemented
+        # Cut into 5 pieces
         actuator_x1 = [0, 0, 0, 0, 0]
         actuator_x2 = [camera_config.frame_width, camera_config.frame_width,
                        camera_config.frame_width, camera_config.frame_width, camera_config.frame_width]
         actuator_y1 = [0, 0, 0, 0, 0]
         actuator_y2 = [camera_config.frame_height, camera_config.frame_height,
                        camera_config.frame_height, camera_config.frame_height, camera_config.frame_height]
+
+        delta = (int)(camera_config.frame_height / num_actuators)
+        offset = (int)((camera_config.frame_width - camera_config.frame_height) / 2)
+
+
+        for i in range(num_actuators):
+            actuator_x1[i] = (int)(offset + i*delta)
+            actuator_x2[i] = (int)(offset + (i+1)*delta)
+            actuator_y1[i] = 0
+            actuator_y2[i] = camera_config.frame_height
 
         # Load tracking parameters
         ouc_params = TrackParams()
@@ -541,13 +572,15 @@ if __name__ == '__main__':
 
             # Draw UI
             # OUC
-            draw_object(camera_capture, ouc_x, ouc_y, (0, 255, 0), camera_config)
-            draw_object(camera_capture, ouc_top_main[0], ouc_top_main[1], (128, 0, 0), camera_config, 0.5)
-            draw_object(camera_capture, ouc_bottom_main[0], ouc_bottom_main[1], (0, 0, 128), camera_config, 0.5)
+            draw_crosshair(camera_capture, ouc_x, ouc_y, (0, 255, 0), camera_config)
+            draw_crosshair(camera_capture, ouc_top_main[0], ouc_top_main[1], (128, 0, 0), camera_config, 0.5)
+            draw_crosshair(camera_capture, ouc_bottom_main[0], ouc_bottom_main[1], (0, 0, 128), camera_config, 0.5)
 
             # Actuators
             for i in range(num_actuators):
-                draw_object(camera_capture, actuators_x[i], actuators_y[i], (0, 255, 0), camera_config, 0.5)
+                draw_crosshair(camera_capture, actuators_x[i], actuators_y[i], (0, 255, 0), camera_config, 0.5)
+                draw_box(camera_capture, actuator_x1[i], actuator_y1[i], actuator_x2[i], actuator_y2[i], (128, 128, 0), 2);
+
 
             cv2.putText(camera_capture, 'Angle: ' + ouc_angle.__str__(), (0, 30), 2, 1, (0, 255, 0), 2)
 
