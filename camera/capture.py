@@ -92,7 +92,7 @@ def init_camera(camera_conf):
     return camera
 
 
-# Discard frames to allow for camera to set its white balance
+# Discard frames to allow for camera to set its exposure and white balance
 def camera_skip_frames(camera, camera_conf):
     # Discard derpy frames
     for i in range(camera_conf.ramp_frames):
@@ -125,7 +125,7 @@ def undistort(img, camera_matrix, dist_coefs):
 
 
 # Dummy function for updating positions of hsv bars
-def update_bars(pos):
+def update_bars():
     pass
 
 
@@ -200,6 +200,9 @@ def find_largest_in_area(object_list, x1, y1, x2, y2):
             largest_area = area
             largest_object = i
 
+    if largest_object == -1:
+        return ()
+
     return object_list[largest_object]
 
 
@@ -233,8 +236,8 @@ def track_objects(img, track_params, show_opening=False):
     # Handle going above 180:
     if track_params.h_max > 180:
         colour_mask_lower1 = np.array([0, track_params.s_min, track_params.v_min])
-        colour_mask_upper1 = np.array([track_params.h_max%180, track_params.s_max, track_params.v_max])
-        colour_mask_lower2 = np.array([track_params.h_min%180, track_params.s_min, track_params.v_min])
+        colour_mask_upper1 = np.array([track_params.h_max % 180, track_params.s_max, track_params.v_max])
+        colour_mask_lower2 = np.array([track_params.h_min % 180, track_params.s_min, track_params.v_min])
         colour_mask_upper2 = np.array([180, track_params.s_max, track_params.v_max])
 
         colour_mask1 = cv2.inRange(img_hsv, colour_mask_lower1, colour_mask_upper1)
@@ -336,7 +339,8 @@ if __name__ == '__main__':
     import sys
     import getopt
 
-    args, img_mask = getopt.getopt(sys.argv[1:], 'uta', ['camera_config=', 'load_params='])
+    args, img_mask = getopt.getopt(sys.argv[1:], 'uta', ['camera_config=', 'load_params=', 'ouc_params=',
+                                                         'ouc_top_params=', 'ouc_bottom_params=', 'actuator_params='])
     args = dict(args)
     args.setdefault('--camera_config', 'config/camera_arena.json')
     # args.setdefault('--ouc_params', 'tracking/paper_green.json')
@@ -485,7 +489,6 @@ if __name__ == '__main__':
         delta = (int)(camera_config.frame_height / num_actuators)
         offset = (int)((camera_config.frame_width - camera_config.frame_height) / 2)
 
-
         for i in range(num_actuators):
             actuator_x1[i] = (int)(offset + i*delta)
             actuator_x2[i] = (int)(offset + (i+1)*delta)
@@ -579,10 +582,12 @@ if __name__ == '__main__':
             # Actuators
             for i in range(num_actuators):
                 draw_crosshair(camera_capture, actuators_x[i], actuators_y[i], (0, 255, 0), camera_config, 0.5)
-                draw_box(camera_capture, actuator_x1[i], actuator_y1[i], actuator_x2[i], actuator_y2[i], (128, 128, 0), 2);
+                draw_box(camera_capture, actuator_x1[i], actuator_y1[i], actuator_x2[i], actuator_y2[i],
+                         (128, 128, 0), 2)
 
+            text = 'Angle: {0.real:.1f}'.format(ouc_angle)
 
-            cv2.putText(camera_capture, 'Angle: ' + ouc_angle.__str__(), (0, 30), 2, 1, (0, 255, 0), 2)
+            cv2.putText(camera_capture, text, (0, 30), 2, 1, (0, 255, 0), 2)
 
             cv2.imshow('img', camera_capture)
             in_read = cv2.waitKey(1) & 0xFF
