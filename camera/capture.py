@@ -79,9 +79,10 @@ def init_camera(camera_conf):
     # NOTE: these parameters seem to set the camera to predefined frame sizes NOT exact dimensions
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_conf.frame_height)
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, camera_conf.frame_width)
-    # camera.set(cv2.CAP_PROP_WHITE_BALANCE_BLUE_U, 0) - no work
-    # camera.set(cv2.CAP_PROP_WHITE_BALANCE_RED_V, 0) - no work
-    # camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1024) - no set false :(
+    camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
+    camera.set(cv2.CAP_PROP_EXPOSURE, 0.0001)
+    camera.set(cv2.CAP_PROP_CONTRAST, 0.5)
+
     # camera.set(cv2.CAP_PROP_XI_AUTO_WB, False) - no work
     # camera.set(cv2.CAP_PROP_CONTRAST,255)  # works, but exposure is still a problem
 
@@ -347,7 +348,7 @@ if __name__ == '__main__':
     # args.setdefault('--ouc_top_params', 'tracking/paper_blue.json')
     # args.setdefault('--ouc_bottom_params', 'tracking/paper_red.json')
     # args.setdefault('--actuator_params', 'tracking/paper_purple.json')
-    args.setdefault('--ouc_params', 'tracking/yellow_block.json')
+    args.setdefault('--ouc_params', 'tracking/white_ping.json')
     args.setdefault('--ouc_top_params', 'tracking/green_block_top.json')
     args.setdefault('--ouc_bottom_params', 'tracking/red_block_bottom.json')
     args.setdefault('--actuator_params', 'tracking/blue_actuator.json')
