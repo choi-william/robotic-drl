@@ -1,0 +1,9 @@
+{
+    "h_max": 99,
+    "h_min": 0,
+    "kernel_size": 10,
+    "s_max": 19,
+    "s_min": 0,
+    "v_max": 255,
+    "v_min": 160
+}
