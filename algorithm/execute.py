@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import gym
+import gymdrl
 from gym import wrappers
 import gymdrl
 import tflearn
