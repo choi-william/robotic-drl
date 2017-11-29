@@ -381,6 +381,11 @@ def main(args):
             else:
                 env = wrappers.Monitor(env, args['monitor_dir'], force=True)
 
+        #removes warnings when saving files, but we delete these things.. that I don't think matter but I'm not sure
+        with sess.graph.as_default():
+             del tf.get_collection_ref(tf.GraphKeys.DATA_AUG)[:]
+             del tf.get_collection_ref(tf.GraphKeys.DATA_PREP)[:]
+
         train(sess, env, args, actor, critic, actor_noise)
 
         if args['use_gym_monitor']:
