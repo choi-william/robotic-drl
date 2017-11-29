@@ -34,3 +34,10 @@ register(
     max_episode_steps=1000,
     reward_threshold=500,
 )
+
+register(
+    id='MembraneHardware-v0',
+    entry_point='gymdrl.envs:MembraneHardware',
+    max_episode_steps=1000,
+    reward_threshold=300,
+)
