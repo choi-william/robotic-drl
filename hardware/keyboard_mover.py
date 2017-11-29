@@ -8,7 +8,8 @@ from hardware_interface import set_servo_angles
 #  A   S   D   F   G
 #  97 115 100 102 103
 
-speed = 10
+speed = 1
+plus_speed = 10
 actuator_map = {'q':(0, 1),
                 'w':(1, 1),
                 'e':(2, 1),
@@ -18,7 +19,18 @@ actuator_map = {'q':(0, 1),
                 's':(1, -1),
                 'd':(2, -1),
                 'f':(3, -1),
-                'g':(4, -1)}
+                'g':(4, -1),
+
+                'Q': (0, plus_speed),
+                'W': (1, plus_speed),
+                'E': (2, plus_speed),
+                'R': (3, plus_speed),
+                'T': (4, plus_speed),
+                'A': (0, -plus_speed),
+                'S': (1, -plus_speed),
+                'D': (2, -plus_speed),
+                'F': (3, -plus_speed),
+                'G': (4, -plus_speed)}
 
 send_angles = [100, 100, 100, 100, 100]
 MIN_ANGLE_INPUT = 0
@@ -46,18 +58,3 @@ if __name__ == '__main__':
         elif send_angles[actuator] < MIN_ANGLE_INPUT:
             send_angles[actuator] = MIN_ANGLE_INPUT
         set_servo_angles(send_angles)
-
-            # from msvcrt import getch
-            #
-            # while True:
-            #     key = ord(getch())
-            #     if key == 27:  # ESC
-            #         break
-            #     elif key == 13:  # Enter
-            #         select()
-            #     elif key == 224:  # Special keys (arrows, f keys, ins, del, etc.)
-            #         key = ord(getch())
-            #         if key == 80:  # Down arrow
-            #             moveDown()
-            #         elif key == 72:  # Up arrow
-            #             moveUp()

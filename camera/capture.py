@@ -460,7 +460,7 @@ if __name__ == '__main__':
         myCamera.release()
     elif u_flag is not None:
         # Undistort a single image
-        infile = cv2.imread(image_filename + image_ext)
+        infile = cv2.imread(image_filename + '0' + image_ext)
         output = undistort(infile, np.array(camera_config.camera_matrix), np.array(camera_config.dist_coefs))
         cv2.imwrite(image_filename + "_undistorted" + image_ext, output)
     elif a_flag is not None:
@@ -473,7 +473,7 @@ if __name__ == '__main__':
         actuators_x = [0, 0, 0, 0, 0]
         actuators_y = [0, 0, 0, 0, 0]
 
-        # Helper variables
+        # Helper variables, tuples are (pos_x, pos_y, angle_deg)
         ouc_top_main = (0, 0, 0)
         ouc_bottom_main = (0, 0, 0)
 

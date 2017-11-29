@@ -1,0 +1,19 @@
+Global:
+    arena play-space
+    actuator positions
+    
+
+Box:
+
+OUC:
+    density/mass,
+    friction,
+    moment of intertia,
+    restitution,
+
+Actuators:
+    mass
+    friction
+    force/motor torque
+    max speed
+    
