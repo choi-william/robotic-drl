@@ -144,27 +144,32 @@ def create_trackbars(camera_conf, track_params):
 
 
 # Draw a target icon on the position of the object
-def draw_crosshair(img, x, y, colour, camera_conf, size=1.0):
+def draw_crosshair(img, x, y, colour, camera_conf, size=1.0, make_label=True):
 
-    cv2.circle(img, (x, y), (int)(20*size), colour, (int)(2*size))
-    if y - (int)(25*size) > 0:
-        cv2.line(img, (x, y), (x, y - (int)(25*size)), colour, (int)(2*size))
+    cv2.circle(img, (x, y), int(20*size), colour, int(2*size))
+    if y - int(25*size) > 0:
+        cv2.line(img, (x, y), (x, y - int(25*size)), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (x, 0), colour, (int)(2*size))
-    if y + (int)(25*size) < camera_conf.frame_height:
-        cv2.line(img, (x, y), (x, y + (int)(25*size)), colour, (int)(2*size))
+        cv2.line(img, (x, y), (x, 0), colour, int(2*size))
+    if y + int(25*size) < camera_conf.frame_height:
+        cv2.line(img, (x, y), (x, y + int(25*size)), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (x, camera_conf.frame_height), colour, (int)(2*size))
-    if x - (int)(25*size) > 0:
-        cv2.line(img, (x, y), (x - (int)(25*size), y), colour, (int)(2*size))
+        cv2.line(img, (x, y), (x, camera_conf.frame_height), colour, int(2*size))
+    if x - int(25*size) > 0:
+        cv2.line(img, (x, y), (x - int(25*size), y), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (0, y), colour, (int)(2*size))
-    if x + (int)(25*size) < camera_conf.frame_width:
-        cv2.line(img, (x, y), (x + (int)(25*size), y), colour, (int)(2*size))
+        cv2.line(img, (x, y), (0, y), colour, int(2*size))
+    if x + int(25*size) < camera_conf.frame_width:
+        cv2.line(img, (x, y), (x + int(25*size), y), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (camera_conf.frame_width, y), colour, (int)(2*size))
+        cv2.line(img, (x, y), (camera_conf.frame_width, y), colour, int(2*size))
 
-    cv2.putText(img, x.__str__() + ", " + y.__str__(), (x, y + 35), 1, 1*size, colour, (int)(2*size))
+    if make_label:
+        draw_label(img, x.__str__() + ", " + y.__str__(), x, y, colour, camera_conf, size)
+
+
+def draw_label(img, text, x, y, colour, camera_conf, size=1.0):
+    cv2.putText(img, text, (x, y + 35), 1, 1*size, colour, int(2*size))
 
 
 def draw_box(img, x1, y1, x2, y2, colour, thickness):
