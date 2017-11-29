@@ -17,17 +17,18 @@ MAX_ANGLE_INPUT = 180
 
 # sample input: [0.5, 0, 1, -0.2, 0.3] MUST BE BETWEEN MIN_SPEED_INPUT AND MAX_SPEED_INPUT
 def set_servo_speeds(servo_speeds):
-
+    # print(servo_speeds)
     encoded_speed_bytes = encode_bytes(servo_speeds, MIN_SPEED_INPUT, MAX_SPEED_INPUT)
     command = [S_CHAR] + encoded_speed_bytes + [NEWLINE_CHAR]
-    print(command)
+    # print(command)
     ser.write(bytearray(command))
 
 
 def set_servo_angles(servo_angles):
+    # print(servo_angles)
     encoded_angle_bytes = encode_bytes(servo_angles, MIN_ANGLE_INPUT, MAX_ANGLE_INPUT)
     command = [A_CHAR] + encoded_angle_bytes + [NEWLINE_CHAR]
-    print(command)
+    # print(command)
     ser.write(bytearray(command))
 
 

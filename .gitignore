@@ -3,6 +3,6 @@ results/
 *.pyc
 .idea/
 algorithm/__pycache__/
-camera/output/
-camera/test*.png
-camera/capture*.png
+gym-drl/gymdrl/envs/camera/output/
+gym-drl/gymdrl/envs/camera/test*.png
+gym-drl/gymdrl/envs/camera/capture*.png

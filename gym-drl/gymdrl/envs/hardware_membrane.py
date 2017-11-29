@@ -1,0 +1,343 @@
+# HARDWARE MEMBRANE ENVIRONMENT
+#
+# Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
+
+import gym
+import cv2
+from gym import spaces
+from gym.utils import seeding
+import numpy as np
+import json
+import time
+from gymdrl.envs.hardware import hardware_interface
+from gymdrl.envs.camera import capture
+
+
+PIX2MM = 300 / 425.0  # Scaling factor
+MM2PIX = 1 / PIX2MM
+
+# Desired Object Position
+TARGET_POS = [230, 100]  # in mm
+GRAVITY = -30
+
+
+##########################
+# Exterior Box Dimension #
+##########################
+# All dimensions in mm
+BOX_WIDTH = 300
+BOX_HEIGHT = 250
+BOX_TRIM_BOTTOM = 32
+BOX_TRIM_LEFT = 90
+
+#######################
+# Hardware parameters #
+#######################
+# All dimensions in mm
+OBJ_SIZE = 40
+
+ACTUATOR_TRANSLATION_MAX = 30  # hardware_param
+ACTUATOR_TRANSLATION_MEAN = ACTUATOR_TRANSLATION_MAX / 2
+ACTUATOR_TRANSLATION_AMP = ACTUATOR_TRANSLATION_MAX / 2
+
+MAX_SPEED = 1600  # mm/s assumed maximum motor speed
+
+########################
+# Rendering Parameters #
+########################
+
+#####################
+# Camera Parameters #
+#####################
+VIEWPORT_W = 640
+VIEWPORT_H = 480
+
+CAMERA_CONFIG = capture.CameraConfig()
+# Actuator mask parameters
+ACTUATOR_X1 = [0, 0, 0, 0, 0]
+ACTUATOR_X2 = [CAMERA_CONFIG.frame_width, CAMERA_CONFIG.frame_width,
+               CAMERA_CONFIG.frame_width, CAMERA_CONFIG.frame_width, CAMERA_CONFIG.frame_width]
+ACTUATOR_Y1 = [0, 0, 0, 0, 0]
+ACTUATOR_Y2 = [CAMERA_CONFIG.frame_height, CAMERA_CONFIG.frame_height,
+               CAMERA_CONFIG.frame_height, CAMERA_CONFIG.frame_height, CAMERA_CONFIG.frame_height]
+
+ACTUATOR_DELTA = int(CAMERA_CONFIG.frame_height / 5)
+ACTUATOR_OFFSET = int((CAMERA_CONFIG.frame_width - CAMERA_CONFIG.frame_height) / 2)
+
+for i in range(5):
+    ACTUATOR_X1[i] = int(ACTUATOR_OFFSET + i * ACTUATOR_DELTA)
+    ACTUATOR_X2[i] = int(ACTUATOR_OFFSET + (i + 1) * ACTUATOR_DELTA)
+    ACTUATOR_Y1[i] = 0
+    ACTUATOR_Y2[i] = CAMERA_CONFIG.frame_height
+
+CAMERA_CONFIG_FILENAME = 'config/camera_arena.json'
+OUC_PARAMS_FILENAME = 'tracking/white_ping.json'
+ACTUATOR_PARAMS_FILENAME = 'tracking/blue_actuator.json'
+
+# Dont add more noise to hardware for now, can add later to ensure better stability
+# ####################
+# # Noise Parameters #
+# ####################
+# OBJ_POS_STDDEV = BOX_WIDTH / 100.0
+# OBJ_VEL_STDDEV = 0  # Nothing set currently
+# ACTUATOR_POS_STDDEV = BOX_WIDTH / 100.0
+# ACTUATOR_VEL_STDDEV = 0  # Nothing set currently
+
+#################################
+# Reward Calculation Parameters #
+#################################
+MAX_DIST_TO_TARGET = np.sqrt(np.square(BOX_WIDTH) + np.square(BOX_HEIGHT))
+# Maximum distance adjacent actuators can be apart vertically due to the membrane
+MAX_VERT_DIST_BETWEEN_ACTUATORS = ACTUATOR_TRANSLATION_MAX
+# Maximum steps at the target before the episode is deemed to be successfully completed
+MAX_TARGET_COUNT = 100
+# Minimum distance between target and OUC to be considered at the target location
+MIN_DIST_TO_TARGET = 10  # mm
+
+
+class MembraneHardware(gym.Env):
+    metadata = {
+        'render.modes': ['human', 'rgb_array']
+    }
+
+    def __init__(self):
+        self._seed()
+        self.viewer = None  # to be used later for rendering
+
+        # Load camera config
+        try:
+            f_cam_conf = open(CAMERA_CONFIG_FILENAME, 'r')
+            CAMERA_CONFIG.from_dict(json.load(f_cam_conf))
+            f_cam_conf.close()
+            print('Loaded camera config from \'' + CAMERA_CONFIG_FILENAME + '\'')
+        except IOError:
+            print('Camera config not found, using default config\n')
+            # print(json.dumps(camera_config.to_dict(), sort_keys=True, indent=4))
+
+        # Load tracking parameters
+        self.ouc_params = capture.TrackParams()
+        self.actuator_params = capture.TrackParams()
+        try:
+            ouc_params_f = open(OUC_PARAMS_FILENAME, 'r')
+            self.ouc_params.from_dict(json.load(ouc_params_f))
+            ouc_params_f.close()
+            print('Loaded OUC params from \'' + OUC_PARAMS_FILENAME + '\'')
+        except IOError:
+            print('OUC params not found, stopping...\n')
+            exit(1)
+        try:
+            actuator_params_f = open(ACTUATOR_PARAMS_FILENAME, 'r')
+            self.actuator_params.from_dict(json.load(actuator_params_f))
+            actuator_params_f.close()
+            print('Loaded OUC params from \'' + ACTUATOR_PARAMS_FILENAME + '\'')
+        except IOError:
+            print('OUC params not found, stopping...\n')
+            exit(1)
+
+        self.arena_camera = capture.init_camera(CAMERA_CONFIG)
+
+        zero_state = [0, 0,
+                      0, 0,
+                      0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0]
+
+        self.previous_state = zero_state
+
+        # Observation Space
+        # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
+        high = np.array([np.inf] * 14)
+        self.observation_space = spaces.Box(low=-high, high=high)
+
+        # Continuous action space; one for each linear actuator (5 total)
+        # action space represents velocity
+        self.action_space = spaces.Box(-1, 1, (5,))
+        self.prev_shaping = None  # for reward calculation
+
+        self.time_previous = None
+
+        self.ouc_ui_pos = (0, 0)
+        self.actuators_ui_pos = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
+        self._reset()
+
+    def _seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+    # def _check_actuator_pos(self):
+    #     result = True
+    #     for i in range(4):
+    #         dist_diff = np.abs(self.actuator_list[i + 1].position.y - self.actuator_list[i].position.y)
+    #         if dist_diff > MAX_VERT_DIST_BETWEEN_ACTUATORS:
+    #             result = False
+    #             break
+    #     return result
+
+    def _destroy(self):
+        self.arena_camera.release()
+
+    def _reset(self):
+        self._destroy()
+
+        # Perform a hardware reset:
+        # Create a v-shape to let the ball roll down
+        # Wiggle each actuator to make sure it is at the bottom
+        # Move all actuators to a rest position
+
+        self.object_at_target = False
+        self.object_at_target_count = 0
+
+        # Set lowest position for actuators
+        reset_values = [90, 90, 90, 90, 90]
+        hardware_interface.set_servo_speeds(reset_values)
+
+        self.time_previous = time.time()
+
+        return self._step(np.array([0, 0, 0, 0, 0]))[0]  # action: zero motor speed
+
+    def _step(self, action):
+        # Totally recall previous state
+        ouc_x = self.previous_state[0]
+        ouc_y = self.previous_state[1]
+        actuators_y = self.previous_state[4:9]
+        # Set motor speeds from the action outputs
+        send_values = [0, 0, 0, 0, 0]
+        for i in range(5):
+            send_values[i] = float(np.clip(action[i], -1, 1))
+        hardware_interface.set_servo_speeds(send_values)
+
+        # Capture an image and process it
+        self.camera_capture = capture.undistort(capture.capture_frame(self.arena_camera),
+                                   np.array(CAMERA_CONFIG.camera_matrix), np.array(CAMERA_CONFIG.dist_coefs))
+        ouc_list = capture.track_objects(self.camera_capture, self.ouc_params)
+        actuator_list = capture.track_objects(self.camera_capture, self.actuator_params)
+
+        if len(ouc_list) != 0:
+            ouc_main = capture.find_largest(ouc_list)
+            self.ouc_ui_pos = (ouc_main[0], ouc_main[1])
+            # Convert pixels to mm relative to bottom left arena corner
+            ouc_x = ouc_main[0] * PIX2MM - BOX_TRIM_LEFT
+            ouc_y = (VIEWPORT_H - ouc_main[1]) * PIX2MM - BOX_TRIM_BOTTOM
+        else:
+            pass
+            # print('No \'ouc\' found!')
+
+        if len(actuator_list) != 0:
+            for i in range(5):
+                index = 4 - i
+                temp = capture.find_largest_in_area(actuator_list, ACTUATOR_X1[index], ACTUATOR_Y1[index],
+                                                    ACTUATOR_X2[index], ACTUATOR_Y2[index])
+                if temp != ():
+                    self.actuators_ui_pos[index] = (temp[0], temp[1])
+                    actuators_y[index] = (VIEWPORT_H - temp[1]) * PIX2MM - BOX_TRIM_BOTTOM
+                    actuator_list.remove(temp)
+        else:
+            pass
+            # print('No actuators found')
+
+        # All measurements are now in mm from the lower left corner
+        # Calculate velocity of actuators using the previous value
+        current_time = time.time()
+        delta_t = current_time - self.time_previous
+        self.time_previous = current_time
+
+        # Velocities are in mm/s
+        object_vel = [
+            (ouc_x - self.previous_state[0]) / delta_t,
+            (ouc_y - self.previous_state[1]) / delta_t,
+        ]
+        actuator_vel = [
+            (actuators_y[0] - self.previous_state[4]) / delta_t,
+            (actuators_y[1] - self.previous_state[5]) / delta_t,
+            (actuators_y[2] - self.previous_state[6]) / delta_t,
+            (actuators_y[3] - self.previous_state[7]) / delta_t,
+            (actuators_y[4] - self.previous_state[8]) / delta_t
+        ]
+
+        # Observation space (state)
+        state = [
+            np.clip((ouc_x - BOX_WIDTH / 2) / (BOX_WIDTH / 2), -1, 1),
+            np.clip((ouc_y - BOX_HEIGHT / 2) / (BOX_HEIGHT / 2), -1, 1),
+            np.clip(object_vel[0] / MAX_SPEED, -1, 1),
+            np.clip(object_vel[1] / MAX_SPEED, -1, 1),
+            np.clip((actuators_y[0] - ACTUATOR_TRANSLATION_MEAN) / ACTUATOR_TRANSLATION_AMP, -1, 1),
+            np.clip((actuators_y[1] - ACTUATOR_TRANSLATION_MEAN) / ACTUATOR_TRANSLATION_AMP, -1, 1),
+            np.clip((actuators_y[2] - ACTUATOR_TRANSLATION_MEAN) / ACTUATOR_TRANSLATION_AMP, -1, 1),
+            np.clip((actuators_y[3] - ACTUATOR_TRANSLATION_MEAN) / ACTUATOR_TRANSLATION_AMP, -1, 1),
+            np.clip((actuators_y[4] - ACTUATOR_TRANSLATION_MEAN) / ACTUATOR_TRANSLATION_AMP, -1, 1),
+            np.clip(actuator_vel[0] / MAX_SPEED, -1, 1),
+            np.clip(actuator_vel[1] / MAX_SPEED, -1, 1),
+            np.clip(actuator_vel[2] / MAX_SPEED, -1, 1),
+            np.clip(actuator_vel[3] / MAX_SPEED, -1, 1),
+            np.clip(actuator_vel[4] / MAX_SPEED, -1, 1)
+        ]
+        assert len(state) == 14
+
+        # For debug puroposes:
+        print('State: ' + state.__str__())
+
+        # Rewards
+        # dist_to_target = TARGET_POS[0]-self.object.position.x
+        dist_to_target = np.sqrt(np.square(TARGET_POS[0] - ouc_x) + np.square(TARGET_POS[1] - ouc_y))
+        reward = 0
+        shaping = \
+            -150 * dist_to_target / MAX_DIST_TO_TARGET \
+            - 150 * np.sqrt(state[2] * state[2] + state[3] * state[3])
+
+        # Check if the objects at target position
+        if dist_to_target < MIN_DIST_TO_TARGET:
+            self.object_at_target = True
+            self.object_at_target_count += 1
+            shaping += 20
+        else:
+            self.object_at_target = False
+            self.object_at_target_count = 0
+
+        if self.prev_shaping is not None:
+            reward = shaping - self.prev_shaping
+        self.prev_shaping = shaping
+
+        # Reduce reward for using the motor
+        for a in action:
+            reward -= 0.05 * np.clip(np.abs(a), 0, 1)
+
+        # Reward for staying at target position
+        reward += 50 * self.object_at_target_count / MAX_TARGET_COUNT
+
+        done = False
+
+        # If object is at the target position the task is complete
+        obj_vel_magnitude = np.abs(np.sqrt(np.square(object_vel[0]) + np.square(object_vel[1])))
+        if dist_to_target < 1 and obj_vel_magnitude < 1 and self.object_at_target_count >= MAX_TARGET_COUNT:
+            done = True
+            reward += 100
+
+        self.previous_state = state
+
+        return np.array(state), reward, done, {}
+
+    def _render(self, mode='human', close=False):
+
+        # Draw OUC position
+        capture.draw_crosshair(self.camera_capture, self.ouc_ui_pos[0], self.ouc_ui_pos[1], (0, 255, 0), CAMERA_CONFIG)
+
+        # Draw actuator positions
+        for i in range(5):
+            capture.draw_crosshair(self.camera_capture, self.actuators_ui_pos[i][0], self.actuators_ui_pos[i][1],
+                                   (0, 255, 0), CAMERA_CONFIG, 0.5)
+            # Draw actuator bounding boxes
+            capture.draw_box(self.camera_capture, ACTUATOR_X1[i], ACTUATOR_Y1[i], ACTUATOR_X2[i], ACTUATOR_Y2[i],
+                             (128, 128, 0), 2)
+
+        # Draw target position
+        target_x = int(TARGET_POS[0] * PIX2MM + BOX_TRIM_LEFT)
+        target_y = int((VIEWPORT_H - TARGET_POS[1]) * PIX2MM + BOX_TRIM_BOTTOM)
+        capture.draw_crosshair(self.camera_capture, target_x, target_y, (0, 0, 255), CAMERA_CONFIG, make_label=False)
+
+        cv2.imshow('img', self.camera_capture)
+
+        return
+
+
+if __name__ == "__main__":
+    env = MembraneHardware()
+    s = env.reset()

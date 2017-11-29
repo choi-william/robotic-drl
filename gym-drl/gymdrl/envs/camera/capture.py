@@ -144,27 +144,32 @@ def create_trackbars(camera_conf, track_params):
 
 
 # Draw a target icon on the position of the object
-def draw_crosshair(img, x, y, colour, camera_conf, size=1.0):
+def draw_crosshair(img, x, y, colour, camera_conf, size=1.0, make_label=True):
 
-    cv2.circle(img, (x, y), (int)(20*size), colour, (int)(2*size))
-    if y - (int)(25*size) > 0:
-        cv2.line(img, (x, y), (x, y - (int)(25*size)), colour, (int)(2*size))
+    cv2.circle(img, (x, y), int(20*size), colour, int(2*size))
+    if y - int(25*size) > 0:
+        cv2.line(img, (x, y), (x, y - int(25*size)), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (x, 0), colour, (int)(2*size))
-    if y + (int)(25*size) < camera_conf.frame_height:
-        cv2.line(img, (x, y), (x, y + (int)(25*size)), colour, (int)(2*size))
+        cv2.line(img, (x, y), (x, 0), colour, int(2*size))
+    if y + int(25*size) < camera_conf.frame_height:
+        cv2.line(img, (x, y), (x, y + int(25*size)), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (x, camera_conf.frame_height), colour, (int)(2*size))
-    if x - (int)(25*size) > 0:
-        cv2.line(img, (x, y), (x - (int)(25*size), y), colour, (int)(2*size))
+        cv2.line(img, (x, y), (x, camera_conf.frame_height), colour, int(2*size))
+    if x - int(25*size) > 0:
+        cv2.line(img, (x, y), (x - int(25*size), y), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (0, y), colour, (int)(2*size))
-    if x + (int)(25*size) < camera_conf.frame_width:
-        cv2.line(img, (x, y), (x + (int)(25*size), y), colour, (int)(2*size))
+        cv2.line(img, (x, y), (0, y), colour, int(2*size))
+    if x + int(25*size) < camera_conf.frame_width:
+        cv2.line(img, (x, y), (x + int(25*size), y), colour, int(2*size))
     else:
-        cv2.line(img, (x, y), (camera_conf.frame_width, y), colour, (int)(2*size))
+        cv2.line(img, (x, y), (camera_conf.frame_width, y), colour, int(2*size))
 
-    cv2.putText(img, x.__str__() + ", " + y.__str__(), (x, y + 35), 1, 1*size, colour, (int)(2*size))
+    if make_label:
+        draw_label(img, x.__str__() + ", " + y.__str__(), x, y, colour, camera_conf, size)
+
+
+def draw_label(img, text, x, y, colour, camera_conf, size=1.0):
+    cv2.putText(img, text, (x, y + 35), 1, 1*size, colour, int(2*size))
 
 
 def draw_box(img, x1, y1, x2, y2, colour, thickness):
@@ -460,7 +465,7 @@ if __name__ == '__main__':
         myCamera.release()
     elif u_flag is not None:
         # Undistort a single image
-        infile = cv2.imread(image_filename + image_ext)
+        infile = cv2.imread(image_filename + '0' + image_ext)
         output = undistort(infile, np.array(camera_config.camera_matrix), np.array(camera_config.dist_coefs))
         cv2.imwrite(image_filename + "_undistorted" + image_ext, output)
     elif a_flag is not None:
@@ -473,7 +478,7 @@ if __name__ == '__main__':
         actuators_x = [0, 0, 0, 0, 0]
         actuators_y = [0, 0, 0, 0, 0]
 
-        # Helper variables
+        # Helper variables, tuples are (pos_x, pos_y, angle_deg)
         ouc_top_main = (0, 0, 0)
         ouc_bottom_main = (0, 0, 0)
 
