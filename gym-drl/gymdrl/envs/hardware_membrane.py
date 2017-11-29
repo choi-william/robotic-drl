@@ -18,8 +18,6 @@ MM2PIX = 1 / PIX2MM
 
 # Desired Object Position
 TARGET_POS = [230, 100]  # in mm
-GRAVITY = -30
-
 
 ##########################
 # Exterior Box Dimension #
@@ -34,9 +32,9 @@ BOX_TRIM_LEFT = 90
 # Hardware parameters #
 #######################
 # All dimensions in mm
-OBJ_SIZE = 40
+# OBJ_SIZE = 40
 
-ACTUATOR_TRANSLATION_MAX = 30  # hardware_param
+ACTUATOR_TRANSLATION_MAX = 63  # hardware_param
 ACTUATOR_TRANSLATION_MEAN = ACTUATOR_TRANSLATION_MAX / 2
 ACTUATOR_TRANSLATION_AMP = ACTUATOR_TRANSLATION_MAX / 2
 
@@ -137,11 +135,9 @@ class MembraneHardware(gym.Env):
         self.arena_camera = capture.init_camera(CAMERA_CONFIG)
 
         zero_state = [0, 0,
-                      0, 0,
-                      0, 0, 0, 0, 0,
                       0, 0, 0, 0, 0]
 
-        self.previous_state = zero_state
+        self.previous_pos = zero_state
 
         # Observation Space
         # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
@@ -174,6 +170,7 @@ class MembraneHardware(gym.Env):
 
     def _destroy(self):
         self.arena_camera.release()
+        cv2.destroyAllWindows()
 
     def _reset(self):
         self._destroy()
@@ -188,7 +185,7 @@ class MembraneHardware(gym.Env):
 
         # Set lowest position for actuators
         reset_values = [90, 90, 90, 90, 90]
-        hardware_interface.set_servo_speeds(reset_values)
+        hardware_interface.set_servo_angles(reset_values)
 
         self.time_previous = time.time()
 
@@ -196,9 +193,9 @@ class MembraneHardware(gym.Env):
 
     def _step(self, action):
         # Totally recall previous state
-        ouc_x = self.previous_state[0]
-        ouc_y = self.previous_state[1]
-        actuators_y = self.previous_state[4:9]
+        ouc_x = self.previous_pos[0]
+        ouc_y = self.previous_pos[1]
+        actuators_y = self.previous_pos[2:7]
         # Set motor speeds from the action outputs
         send_values = [0, 0, 0, 0, 0]
         for i in range(5):
@@ -242,16 +239,24 @@ class MembraneHardware(gym.Env):
 
         # Velocities are in mm/s
         object_vel = [
-            (ouc_x - self.previous_state[0]) / delta_t,
-            (ouc_y - self.previous_state[1]) / delta_t,
+            (ouc_x - self.previous_pos[0]) / delta_t,
+            (ouc_y - self.previous_pos[1]) / delta_t,
         ]
         actuator_vel = [
-            (actuators_y[0] - self.previous_state[4]) / delta_t,
-            (actuators_y[1] - self.previous_state[5]) / delta_t,
-            (actuators_y[2] - self.previous_state[6]) / delta_t,
-            (actuators_y[3] - self.previous_state[7]) / delta_t,
-            (actuators_y[4] - self.previous_state[8]) / delta_t
+            (actuators_y[0] - self.previous_pos[2]) / delta_t,
+            (actuators_y[1] - self.previous_pos[3]) / delta_t,
+            (actuators_y[2] - self.previous_pos[4]) / delta_t,
+            (actuators_y[3] - self.previous_pos[5]) / delta_t,
+            (actuators_y[4] - self.previous_pos[6]) / delta_t
         ]
+
+        self.previous_pos = [ouc_x,
+                             ouc_y,
+                             actuators_y[0],
+                             actuators_y[1],
+                             actuators_y[2],
+                             actuators_y[3],
+                             actuators_y[4]]
 
         # Observation space (state)
         state = [
@@ -310,8 +315,6 @@ class MembraneHardware(gym.Env):
         if dist_to_target < 1 and obj_vel_magnitude < 1 and self.object_at_target_count >= MAX_TARGET_COUNT:
             done = True
             reward += 100
-
-        self.previous_state = state
 
         return np.array(state), reward, done, {}
 
