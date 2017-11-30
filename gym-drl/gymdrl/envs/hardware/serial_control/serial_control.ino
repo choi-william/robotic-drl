@@ -10,7 +10,7 @@
 #define LOW_ANGLE 0
 
 #define BIT_TO_ANGLE_FACTOR 180.0/255.0
-#define MID_BIT 127.5
+#define MID_BIT 127
 
 #define BUFFER_SIZE 6
 

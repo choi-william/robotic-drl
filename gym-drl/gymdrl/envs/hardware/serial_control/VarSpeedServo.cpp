@@ -369,35 +369,35 @@ void VarSpeedServo::slowmove(int value, uint8_t speed) {
 	// in target instead of in ticks in the servo structure and speed will be save
 	// there too.
 
-	if (speed) {
-		if(value < MIN_PULSE_WIDTH) {
-		// treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
-			if(value < 0) value = 0;
-			if(value > 180) value = 180;
-			value = map(value, 0, 180, SERVO_MIN(),  SERVO_MAX());      
-		}
-		// calculate and store the values for the given channel
-		byte channel = this->servoIndex;
-		if( (channel >= 0) && (channel < MAX_SERVOS) ) {   // ensure channel is valid
-			if( value < SERVO_MIN() )          // ensure pulse width is valid
-				value = SERVO_MIN();
-			else if( value > SERVO_MAX() )
-				value = SERVO_MAX();   
+//	if (speed) {(value < MIN_PULSE_WIDTH) {
+  // treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
+    if(value < 0) value = 0;
+    if(value > 180) value = 180;
+    value = map(value, 0, 180, SERVO_MIN(),  SERVO_MAX());      
+  }
+  // calculate and store the values for the given channel
+  byte channel = this->servoIndex;
+  if( (channel >= 0) && (channel < MAX_SERVOS) ) {   // ensure channel is valid
+    if( value < SERVO_MIN() )          // ensure pulse width is valid
+      value = SERVO_MIN();
+    else if( value > SERVO_MAX() )
+      value = SERVO_MAX();   
 
-			value = value - TRIM_DURATION;
-			value = usToTicks(value);  // convert to ticks after compensating for interrupt overhead - 12 Aug 2009
+    value = value - TRIM_DURATION;
+    value = usToTicks(value);  // convert to ticks after compensating for interrupt overhead - 12 Aug 2009
 
-			// Set speed and direction
-			uint8_t oldSREG = SREG;
-			cli();
-			servos[channel].target = value;  
-			servos[channel].speed = speed;  
-			SREG = oldSREG;   
-		}
-	} 
-	else {
-		write (value);
-	}
+    // Set speed and direction
+    uint8_t oldSREG = SREG;
+    cli();
+    servos[channel].target = value;  
+    servos[channel].speed = speed;  
+    SREG = oldSREG;   
+  }
+	if
+//	} 
+//	else {
+//		write (value);
+//	}
 }
 // End of Extension for slowmove
 
