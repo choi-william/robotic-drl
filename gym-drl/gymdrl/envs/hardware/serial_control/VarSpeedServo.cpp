@@ -365,11 +365,12 @@ void VarSpeedServo::writeMicroseconds(int value)
           speed=255 - Maximum speed
 */
 void VarSpeedServo::slowmove(int value, uint8_t speed) {
-	// This fuction is a copy of write and witeMicroseconds but value will be saved
-	// in target instead of in ticks in the servo structure and speed will be save
-	// there too.
+  // This fuction is a copy of write and witeMicroseconds but value will be saved
+  // in target instead of in ticks in the servo structure and speed will be save
+  // there too.
 
-//	if (speed) {(value < MIN_PULSE_WIDTH) {
+//  if (speed) {
+  if(value < MIN_PULSE_WIDTH) {
   // treat values less than 544 as angles in degrees (valid values in microseconds are handled as microseconds)
     if(value < 0) value = 0;
     if(value > 180) value = 180;
@@ -393,11 +394,10 @@ void VarSpeedServo::slowmove(int value, uint8_t speed) {
     servos[channel].speed = speed;  
     SREG = oldSREG;   
   }
-	if
-//	} 
-//	else {
-//		write (value);
-//	}
+//  } 
+//  else {
+//    write (value);
+//  }
 }
 // End of Extension for slowmove
 

@@ -1,3 +1,4 @@
+
 #include "VarSpeedServo.h"
 
 #define ACTUATOR_1_PIN 3
@@ -6,8 +7,8 @@
 #define ACTUATOR_4_PIN 9
 #define ACTUATOR_5_PIN 10
 
-#define HIGH_ANGLE 180
-#define LOW_ANGLE 0
+#define HIGH_ANGLE 130
+#define LOW_ANGLE 90
 
 #define BIT_TO_ANGLE_FACTOR 180.0/255.0
 #define MID_BIT 127

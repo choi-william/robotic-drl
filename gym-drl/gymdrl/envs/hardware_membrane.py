@@ -201,7 +201,7 @@ class MembraneHardware(gym.Env):
         self.object_at_target_count = 0
 
         # Set lowest position for actuators
-        reset_values = [120, 105, 90, 105, 120]
+        reset_values = [125, 105, 90, 105, 125]
         hardware_interface.set_servo_angles(self.serial, reset_values)
         time.sleep(3)
 
@@ -308,6 +308,8 @@ class MembraneHardware(gym.Env):
             if abs(state[4+i] + 1) < epsilon:
                 send_values[i] = np.clip([send_values[i]], 0.0, 1.0)[0]
 
+        # print('Send speeds: {:.2f},{:.2f},{:.2f},{:.2f},{:.2f}'.format(
+        #     send_values[0], send_values[1], send_values[2], send_values[3], send_values[4]))
         hardware_interface.set_servo_speeds(self.serial, send_values)
 
 

@@ -83,6 +83,7 @@ actuator_map = {'q': (0, True, 1),
                 '?': (4, False, STOP_VAR),
                 }
 
+reset_angles = [180, 180, 180, 180, 180]
 send_angles = [100, 100, 100, 100, 100]
 send_speeds = [0.0, 0.0, 0.0, 0.0, 0.0]
 MIN_ANGLE_INPUT = 0
@@ -104,6 +105,9 @@ if __name__ == '__main__':
                 send_angles[0] += 60
                 send_angles[1] += 60
                 set_servo_angles(ser, send_angles)
+                continue
+            if key == '=':
+                set_servo_angles(ser, reset_angles)
                 continue
             try:
                 actuator, do_set_pos, direction = actuator_map[key]
