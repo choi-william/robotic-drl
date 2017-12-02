@@ -20,6 +20,8 @@ import argparse
 import pprint as pp
 import architectures
 
+import pickle
+
 import os
 import re
 
@@ -54,13 +56,13 @@ class ActorNetwork(object):
         with tf.variable_scope('actor_model'):
             self.inputs, self.out, self.scaled_out = self.create_actor_network()
 
-        self.network_params = tf.trainable_variables()
+            self.network_params = tf.trainable_variables()
 
-        # Target Network
-        self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network()
+            # Target Network
+            self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network()
 
-        self.target_network_params = tf.trainable_variables()[
-            len(self.network_params):]
+            self.target_network_params = tf.trainable_variables()[
+                len(self.network_params):]
 
         # Op for periodically updating target network with online network
         # weights
@@ -128,14 +130,15 @@ class CriticNetwork(object):
         self.gamma = gamma
 
         # Create the critic network
-        self.inputs, self.action, self.out = self.create_critic_network()
+        with tf.variable_scope('critic_model'):
+            self.inputs, self.action, self.out = self.create_critic_network()
 
-        self.network_params = tf.trainable_variables()[num_actor_vars:]
+            self.network_params = tf.trainable_variables()[num_actor_vars:]
 
-        # Target Network
-        self.target_inputs, self.target_action, self.target_out = self.create_critic_network()
+            # Target Network
+            self.target_inputs, self.target_action, self.target_out = self.create_critic_network()
 
-        self.target_network_params = tf.trainable_variables()[(len(self.network_params) + num_actor_vars):]
+            self.target_network_params = tf.trainable_variables()[(len(self.network_params) + num_actor_vars):]
 
         # Op for periodically updating target network with online network
         # weights with regularization
@@ -224,8 +227,10 @@ def build_summaries():
     tf.summary.scalar("Reward", episode_reward)
     episode_ave_max_q = tf.Variable(0.)
     tf.summary.scalar("Qmax Value", episode_ave_max_q)
+    episode_ave_noise = tf.Variable(0.)
+    tf.summary.scalar("Average noise", episode_ave_noise)
 
-    summary_vars = [episode_reward, episode_ave_max_q]
+    summary_vars = [episode_reward, episode_ave_max_q,episode_ave_noise]
     summary_ops = tf.summary.merge_all()
 
     return summary_ops, summary_vars
@@ -248,14 +253,23 @@ def train(sess, env, args, actor, critic, actor_noise):
 
     # Saver
     actor_model_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="actor_model")
-    saver = tf.train.Saver(actor_model_variables)
+    critic_model_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="critic_model")
+
+    saver = tf.train.Saver(actor_model_variables + critic_model_variables)
+
+    # Initialize replay memory
+    replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
 
     if args['input_name'] is not None:
         saver.restore(sess, args['model_dir']+'/'+args['input_name']+'/'+args['input_name'])
 
+        if (not args['fresh_train']):
+            train_state_dir = args['model_dir']+'/'+args['input_name'] + '/' + args['input_name'] + '_trainstate' + '.p'
+            train_state = pickle.load( open( train_state_dir, "rb" ) )
 
-    # Initialize replay memory
-    replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
+            actor_noise.x_prev = train_state['x_prev']
+            replay_buffer.restore_state(train_state['rb'])
+
 
     for i in range(int(args['max_episodes'])):
 
@@ -265,7 +279,11 @@ def train(sess, env, args, actor, critic, actor_noise):
         ep_ave_max_q = 0
 
         if i % 10 == 0:
-            saver.save(sess, args['model_dir']+'/'+args['output_name'] + '/' + args['output_name'])
+            model_folder = args['model_dir']+'/'+args['output_name'] + '/'
+            saver.save(sess, model_folder + args['output_name'])
+            train_state = {'x_prev': actor_noise.x_prev, 'rb': replay_buffer.get_state()}
+            pickle.dump( train_state, open( model_folder + args['output_name'] + '_trainstate' + '.p', "wb" ))
+
             print('Saved updated model\n')
 
         for j in range(int(args['max_episode_len'])):
@@ -320,10 +338,10 @@ def train(sess, env, args, actor, critic, actor_noise):
             ep_reward += r
 
             if terminal:
-
                 summary_str = sess.run(summary_ops, feed_dict={
                     summary_vars[0]: ep_reward,
-                    summary_vars[1]: ep_ave_max_q / float(j)
+                    summary_vars[1]: ep_ave_max_q / float(j),
+                    summary_vars[2]: np.mean(actor_noise.x_prev)
                 })
 
                 writer.add_summary(summary_str, i)
@@ -414,8 +432,9 @@ if __name__ == '__main__':
     parser.add_argument('--model-dir', help='directory for storing saved models', default='../results/models')
     parser.add_argument('--output-name', help='name of the saved model', default='unnamed')
     parser.add_argument('--input-name', help='name of the saved model', default=None)
+    parser.add_argument('--fresh-train', help='render the gym env', action='store_true')
 
-
+    parser.set_defaults(fresh_train=False)
     parser.set_defaults(render_env=True)
     parser.set_defaults(use_gym_monitor=False)
 

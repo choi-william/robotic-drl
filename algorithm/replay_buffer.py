@@ -46,6 +46,16 @@ class ReplayBuffer(object):
 
         return s_batch, a_batch, r_batch, t_batch, s2_batch
 
+    def get_state(self):
+        return {'buffer_size': self.buffer_size,
+                'count': self.count,
+                'buffer': self.buffer}
+
+    def restore_state(self,data):
+        self.buffer_size = data['buffer_size']
+        self.count = data['count']
+        self.buffer = data['buffer']
+
     def clear(self):
         self.deque.clear()
         self.count = 0
