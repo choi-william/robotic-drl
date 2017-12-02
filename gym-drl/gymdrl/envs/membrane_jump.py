@@ -270,8 +270,21 @@ class MembraneJump(gym.Env):
         # dist = self.object.position.y - y_under - 2
 
 
-        
-        reward = self.object.linearVelocity.y**2
+        temp = 10 * self.object.linearVelocity.y**2
+        shaping = (math.fabs(self.actuator_list[0].linearVelocity.y) +
+                  math.fabs(self.actuator_list[1].linearVelocity.y) +
+                  math.fabs(self.actuator_list[2].linearVelocity.y) +
+                  math.fabs(self.actuator_list[3].linearVelocity.y) +
+                  math.fabs(self.actuator_list[4].linearVelocity.y)) / 5
+
+        reward = temp
+
+        if (temp > 1):
+            shaping += 20
+
+        if self.prev_shaping is not None:
+            reward += shaping - self.prev_shaping
+        self.prev_shaping = shaping
 
         # if (dist) > 0:
         #     #got some bounce action going on
@@ -279,7 +292,7 @@ class MembraneJump(gym.Env):
         # else:
         #     reward = 10*(dist)
 
-        reward = reward - 100;
+        reward = reward - 100
 
         for a in action:
             reward -= 5 * np.clip(np.abs(a), 0, 1)

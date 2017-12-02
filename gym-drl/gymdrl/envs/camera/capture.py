@@ -89,6 +89,8 @@ def init_camera(camera_conf):
     if not camera.isOpened():
         print("Error: No camera connected at port " + camera_conf.camera_port.__str__())
         exit(-1)
+    else:
+        print('Camera found at port ' + camera_conf.camera_port.__str__())
 
     return camera
 
@@ -105,7 +107,6 @@ def camera_skip_frames(camera, camera_conf):
 # Capture a single frame
 def capture_frame(camera):
     # print("Taking image...")
-
     retval, im = camera.read()
     return im
 
@@ -258,7 +259,7 @@ def track_objects(img, track_params, show_opening=False):
 
     img_colour_masked = cv2.bitwise_and(img, img, mask=colour_mask)
 
-    cv2.imshow('img_colour_masked', img_colour_masked)
+    # cv2.imshow('img_colour_masked', img_colour_masked)
 
     # Use opening (combined erosion and dilation) to remove noise
     kernel = np.ones((track_params.kernel_size, track_params.kernel_size), np.uint8)

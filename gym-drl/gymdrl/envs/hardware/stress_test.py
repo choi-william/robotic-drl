@@ -1,5 +1,6 @@
 # from hardware.hardware_interface import set_servo_angles
-from hardware_interface import set_servo_angles
+from gymdrl.envs.hardware.hardware_interface import set_servo_angles
+from gymdrl.envs.hardware.hardware_interface import init_serial
 from cmath import sin
 import time
 
@@ -45,17 +46,17 @@ def xor(a, b):
     return (a and not b) or (b and not a)
 
 
-def sine_test():
+def sine_test(ser):
     for iteration in range(SINE_ITERATIONS):
         for actuator in range(5):
             send_angles[actuator] = SINE_OFFSET + \
                 int(SINE_AMPLITUDE * sin((DEG2RAD * iteration + actuator * SINE_DELAY) * SINE_SPEED).real)
-        set_servo_angles(send_angles)
+        set_servo_angles(ser, send_angles)
         time.sleep(0.01)
 
 
 # Vibrates actuators in a 'w' shape to minimise arena movement
-def vibration_test():
+def vibration_test(ser):
     for test_num in range(len(VIBRATION_AMPLITUDES)):
         amplitude = VIBRATION_AMPLITUDES[test_num]
         delay = VIBRATION_DELAY[test_num]
@@ -68,11 +69,11 @@ def vibration_test():
                 else:
                     send_angles[actuator] = VIBRATION_OFFSET + amplitude
 
-            set_servo_angles(send_angles)
+            set_servo_angles(ser, send_angles)
             time.sleep(delay)
 
 
-def slamming_test():
+def slamming_test(ser):
     for iteration in range(SLAMMING_ITERATIONS):
         for actuator in range(5):
             if iteration % 2 is 0:
@@ -80,11 +81,12 @@ def slamming_test():
             else:
                 send_angles[actuator] = MAX_ACTUATOR_ANGLE
 
-        set_servo_angles(send_angles)
+        set_servo_angles(ser, send_angles)
         time.sleep(SLAMMING_DELAY)
 
 
 if __name__ == '__main__':
+    ser = init_serial()
     print('Starting stress test')
     #
     # print('Starting sine test')
@@ -94,7 +96,7 @@ if __name__ == '__main__':
     # time.sleep(1)
     #
     print('Starting vibration test')
-    vibration_test()
+    vibration_test(ser)
     print('Finished vibration test')
 
     # time.sleep(1)

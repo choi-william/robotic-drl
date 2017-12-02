@@ -12,31 +12,42 @@ import time
 from gymdrl.envs.hardware import hardware_interface
 from gymdrl.envs.camera import capture
 
+epsilon = 1E-4 # used for float comparisons
 
 PIX2MM = 300 / 425.0  # Scaling factor
 MM2PIX = 1 / PIX2MM
 
 # Desired Object Position
 TARGET_POS = [230, 100]  # in mm
-GRAVITY = -30
 
+VIEWPORT_W = 640
+VIEWPORT_H = 480
 
 ##########################
 # Exterior Box Dimension #
 ##########################
 # All dimensions in mm
-BOX_WIDTH = 300
-BOX_HEIGHT = 250
-BOX_TRIM_BOTTOM = 32
-BOX_TRIM_LEFT = 90
+BOX_WIDTH = 267
+BOX_HEIGHT = 300
+BOX_TRIM_BOTTOM = 39
+BOX_TRIM_LEFT = 92
+
+# UI PARAMETERS:
+BOX_UI_X1 = int(MM2PIX * (BOX_TRIM_LEFT))
+BOX_UI_X2 = int(MM2PIX * (BOX_TRIM_LEFT + BOX_WIDTH))
+BOX_UI_Y2 = int(VIEWPORT_H - MM2PIX * (BOX_TRIM_BOTTOM))
+BOX_UI_Y1 = int(VIEWPORT_H - MM2PIX * (BOX_TRIM_BOTTOM + BOX_HEIGHT))
+
+BOX_UI_CENTER_X = int(MM2PIX * (BOX_TRIM_LEFT + BOX_WIDTH / 2))
+BOX_UI_CENTER_Y = int(VIEWPORT_H - MM2PIX * (BOX_TRIM_BOTTOM + BOX_HEIGHT/2))
 
 #######################
 # Hardware parameters #
 #######################
 # All dimensions in mm
-OBJ_SIZE = 40
+# OBJ_SIZE = 40
 
-ACTUATOR_TRANSLATION_MAX = 30  # hardware_param
+ACTUATOR_TRANSLATION_MAX = 65  # hardware_param
 ACTUATOR_TRANSLATION_MEAN = ACTUATOR_TRANSLATION_MAX / 2
 ACTUATOR_TRANSLATION_AMP = ACTUATOR_TRANSLATION_MAX / 2
 
@@ -49,8 +60,6 @@ MAX_SPEED = 1600  # mm/s assumed maximum motor speed
 #####################
 # Camera Parameters #
 #####################
-VIEWPORT_W = 640
-VIEWPORT_H = 480
 
 CAMERA_CONFIG = capture.CameraConfig()
 # Actuator mask parameters
@@ -70,9 +79,10 @@ for i in range(5):
     ACTUATOR_Y1[i] = 0
     ACTUATOR_Y2[i] = CAMERA_CONFIG.frame_height
 
-CAMERA_CONFIG_FILENAME = 'config/camera_arena.json'
-OUC_PARAMS_FILENAME = 'tracking/white_ping.json'
-ACTUATOR_PARAMS_FILENAME = 'tracking/blue_actuator.json'
+CONFIG_PREFIX = '../gym-drl/gymdrl/envs/camera/'
+CAMERA_CONFIG_FILENAME = CONFIG_PREFIX + 'config/camera_arena.json'
+OUC_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/white_ping.json'
+ACTUATOR_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/blue_actuator.json'
 
 # Dont add more noise to hardware for now, can add later to ensure better stability
 # ####################
@@ -134,14 +144,17 @@ class MembraneHardware(gym.Env):
             print('OUC params not found, stopping...\n')
             exit(1)
 
+        self.camera_capture = None
+
+        # Initialize hardware devices
         self.arena_camera = capture.init_camera(CAMERA_CONFIG)
+        capture.camera_skip_frames(self.arena_camera, CAMERA_CONFIG)
+        self.serial = hardware_interface.init_serial()
 
         zero_state = [0, 0,
-                      0, 0,
-                      0, 0, 0, 0, 0,
                       0, 0, 0, 0, 0]
 
-        self.previous_state = zero_state
+        self.previous_pos = zero_state
 
         # Observation Space
         # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
@@ -157,6 +170,7 @@ class MembraneHardware(gym.Env):
 
         self.ouc_ui_pos = (0, 0)
         self.actuators_ui_pos = [(0, 0), (0, 0), (0, 0), (0, 0), (0, 0)]
+
         self._reset()
 
     def _seed(self, seed=None):
@@ -174,9 +188,9 @@ class MembraneHardware(gym.Env):
 
     def _destroy(self):
         self.arena_camera.release()
+        cv2.destroyAllWindows()
 
     def _reset(self):
-        self._destroy()
 
         # Perform a hardware reset:
         # Create a v-shape to let the ball roll down
@@ -187,8 +201,9 @@ class MembraneHardware(gym.Env):
         self.object_at_target_count = 0
 
         # Set lowest position for actuators
-        reset_values = [90, 90, 90, 90, 90]
-        hardware_interface.set_servo_speeds(reset_values)
+        reset_values = [125, 105, 90, 105, 125]
+        hardware_interface.set_servo_angles(self.serial, reset_values)
+        time.sleep(3)
 
         self.time_previous = time.time()
 
@@ -196,18 +211,14 @@ class MembraneHardware(gym.Env):
 
     def _step(self, action):
         # Totally recall previous state
-        ouc_x = self.previous_state[0]
-        ouc_y = self.previous_state[1]
-        actuators_y = self.previous_state[4:9]
-        # Set motor speeds from the action outputs
-        send_values = [0, 0, 0, 0, 0]
-        for i in range(5):
-            send_values[i] = float(np.clip(action[i], -1, 1))
-        hardware_interface.set_servo_speeds(send_values)
+        ouc_x = self.previous_pos[0]
+        ouc_y = self.previous_pos[1]
+        actuators_y = self.previous_pos[2:7]
 
         # Capture an image and process it
         self.camera_capture = capture.undistort(capture.capture_frame(self.arena_camera),
-                                   np.array(CAMERA_CONFIG.camera_matrix), np.array(CAMERA_CONFIG.dist_coefs))
+                                                np.array(CAMERA_CONFIG.camera_matrix),
+                                                np.array(CAMERA_CONFIG.dist_coefs))
         ouc_list = capture.track_objects(self.camera_capture, self.ouc_params)
         actuator_list = capture.track_objects(self.camera_capture, self.actuator_params)
 
@@ -239,19 +250,28 @@ class MembraneHardware(gym.Env):
         current_time = time.time()
         delta_t = current_time - self.time_previous
         self.time_previous = current_time
+        # print('Freq: ' + (1/delta_t).__str__())
 
         # Velocities are in mm/s
         object_vel = [
-            (ouc_x - self.previous_state[0]) / delta_t,
-            (ouc_y - self.previous_state[1]) / delta_t,
+            (ouc_x - self.previous_pos[0]) / delta_t,
+            (ouc_y - self.previous_pos[1]) / delta_t,
         ]
         actuator_vel = [
-            (actuators_y[0] - self.previous_state[4]) / delta_t,
-            (actuators_y[1] - self.previous_state[5]) / delta_t,
-            (actuators_y[2] - self.previous_state[6]) / delta_t,
-            (actuators_y[3] - self.previous_state[7]) / delta_t,
-            (actuators_y[4] - self.previous_state[8]) / delta_t
+            (actuators_y[0] - self.previous_pos[2]) / delta_t,
+            (actuators_y[1] - self.previous_pos[3]) / delta_t,
+            (actuators_y[2] - self.previous_pos[4]) / delta_t,
+            (actuators_y[3] - self.previous_pos[5]) / delta_t,
+            (actuators_y[4] - self.previous_pos[6]) / delta_t
         ]
+
+        self.previous_pos = [ouc_x,
+                             ouc_y,
+                             actuators_y[0],
+                             actuators_y[1],
+                             actuators_y[2],
+                             actuators_y[3],
+                             actuators_y[4]]
 
         # Observation space (state)
         state = [
@@ -273,7 +293,25 @@ class MembraneHardware(gym.Env):
         assert len(state) == 14
 
         # For debug puroposes:
-        print('State: ' + state.__str__())
+        # print('OUC pos: {:.2f},{:.2f}'.format(state[0], state[1]))
+        # print('actuator pos: {:.2f},{:.2f},{:.2f},{:.2f},{:.2f}'.format(state[4], state[5], state[6], state[7], state[8]))
+
+        # Set motor speeds from the action outputs
+        send_values = [0, 0, 0, 0, 0]
+        for i in range(5):
+            send_values[i] = float(np.clip(action[i], -1.0, 1.0))
+        # Now make sure that if we are at the edge of the actuator movement, we don't actually move it more:
+        for i in range(5):
+            if abs(state[4+i] - 1) < epsilon:
+                send_values[i] = np.clip([send_values[i]], -1.0, 0.0)[0]
+                continue
+            if abs(state[4+i] + 1) < epsilon:
+                send_values[i] = np.clip([send_values[i]], 0.0, 1.0)[0]
+
+        # print('Send speeds: {:.2f},{:.2f},{:.2f},{:.2f},{:.2f}'.format(
+        #     send_values[0], send_values[1], send_values[2], send_values[3], send_values[4]))
+        hardware_interface.set_servo_speeds(self.serial, send_values)
+
 
         # Rewards
         # dist_to_target = TARGET_POS[0]-self.object.position.x
@@ -311,31 +349,33 @@ class MembraneHardware(gym.Env):
             done = True
             reward += 100
 
-        self.previous_state = state
-
         return np.array(state), reward, done, {}
 
     def _render(self, mode='human', close=False):
+        if self.camera_capture is not None:
+            # Draw OUC position
+            capture.draw_crosshair(self.camera_capture, self.ouc_ui_pos[0], self.ouc_ui_pos[1], (0, 255, 0), CAMERA_CONFIG)
 
-        # Draw OUC position
-        capture.draw_crosshair(self.camera_capture, self.ouc_ui_pos[0], self.ouc_ui_pos[1], (0, 255, 0), CAMERA_CONFIG)
+            # Draw actuator positions
+            for i in range(5):
+                capture.draw_crosshair(self.camera_capture, self.actuators_ui_pos[i][0], self.actuators_ui_pos[i][1],
+                                       (0, 255, 0), CAMERA_CONFIG, 0.5)
+                # Draw actuator bounding boxes
+                capture.draw_box(self.camera_capture, ACTUATOR_X1[i], ACTUATOR_Y1[i], ACTUATOR_X2[i], ACTUATOR_Y2[i],
+                                 (200, 0, 0), 1)
 
-        # Draw actuator positions
-        for i in range(5):
-            capture.draw_crosshair(self.camera_capture, self.actuators_ui_pos[i][0], self.actuators_ui_pos[i][1],
-                                   (0, 255, 0), CAMERA_CONFIG, 0.5)
-            # Draw actuator bounding boxes
-            capture.draw_box(self.camera_capture, ACTUATOR_X1[i], ACTUATOR_Y1[i], ACTUATOR_X2[i], ACTUATOR_Y2[i],
-                             (128, 128, 0), 2)
+            # Draw arena
+            capture.draw_box(self.camera_capture, BOX_UI_X1, BOX_UI_Y1, BOX_UI_X2, BOX_UI_Y2, (20, 20, 20), 1)
+            capture.draw_crosshair(self.camera_capture, BOX_UI_CENTER_X, BOX_UI_CENTER_Y, (20, 20, 20), CAMERA_CONFIG,
+                                   0.5, make_label=False)
 
-        # Draw target position
-        target_x = int(TARGET_POS[0] * PIX2MM + BOX_TRIM_LEFT)
-        target_y = int((VIEWPORT_H - TARGET_POS[1]) * PIX2MM + BOX_TRIM_BOTTOM)
-        capture.draw_crosshair(self.camera_capture, target_x, target_y, (0, 0, 255), CAMERA_CONFIG, make_label=False)
+            # Draw target position
+            target_x = int(TARGET_POS[0] * MM2PIX + BOX_TRIM_LEFT)
+            target_y = VIEWPORT_H - int(TARGET_POS[1] * MM2PIX + BOX_TRIM_BOTTOM)
+            capture.draw_crosshair(self.camera_capture, target_x, target_y, (0, 0, 255), CAMERA_CONFIG, make_label=False)
 
-        cv2.imshow('img', self.camera_capture)
-
-        return
+            cv2.imshow('Hardware Membrane', self.camera_capture)
+            cv2.waitKey(10)
 
 
 if __name__ == "__main__":

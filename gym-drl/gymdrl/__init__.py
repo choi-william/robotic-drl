@@ -24,7 +24,7 @@ register(
 register(
     id='MembraneJump-v0',
     entry_point='gymdrl.envs:MembraneJump',
-    max_episode_steps=1000,
+    max_episode_steps=500,
     reward_threshold=300,
 )
 
@@ -38,6 +38,6 @@ register(
 register(
     id='MembraneHardware-v0',
     entry_point='gymdrl.envs:MembraneHardware',
-    max_episode_steps=1000,
+    max_episode_steps=300,
     reward_threshold=300,
 )
