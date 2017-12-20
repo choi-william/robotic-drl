@@ -76,13 +76,27 @@ OpenAI gym is our reinforcement learning environment testing framework.
 
 `pip3 install gym`
 
+##### pyBox2D #####
+
+Pybox2D is used for our physics enviornment
+
+Install instructions: https://github.com/pybox2d/pybox2d/blob/master/INSTALL.md
+
 ##### OpenCV #####
 
 Installation instructions for ubuntu can be found here:
 
 https://www.pyimagesearch.com/2016/10/24/ubuntu-16-04-how-to-install-opencv/
 
-For mac, should be similar...hopefully
+If you want to avoid using virtualenvironments (not that they're bad)
+
+`pip3 install opencv-python`
+
+##### PySerial #####
+
+Used for arduino communication
+
+`pip3 install pyserial`
 
 #### Misc Dependencies ####
 `brew install ffmpeg` - Necessary to show simulation visuals
