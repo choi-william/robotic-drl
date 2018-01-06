@@ -1,19 +1,26 @@
 Global:
-    arena play-space
-    actuator positions
-    
+    arena play-space,
+    actuator positions - min/max, resolution, start position
+    gravity - done,
 
-Box:
 
 OUC:
-    density/mass,
-    friction,
-    moment of intertia,
-    restitution,
+    shape:
+        ball
+        square
+    size:
+        pingpong - 40mm
+    mass:
+
+    friction:
+        for vertical - taken into account in gravity
+    moment of intertia, - for rolling around:
+
+    restitution:
+        inconsistent, somewhere between 0 and 0.2
 
 Actuators:
     mass
     friction
     force/motor torque
     max speed
-    
