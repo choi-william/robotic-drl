@@ -14,7 +14,8 @@ from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonS
 
 FPS = 50
 # Desired Object Position
-TARGET_POS = [15,20]
+TARGET_POS = [5,15]
+BASKET_WIDTH = 8
 GRAVITY = -30
 
 ##########################
@@ -77,7 +78,7 @@ MAX_VERT_DIST_BETWEEN_ACTUATORS = BOX_WIDTH/4
 # Maximum steps at the target before the episode is deemed to be successfully completed
 MAX_TARGET_COUNT = 100
 
-class MembraneJump(gym.Env):
+class MembraneBasket(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : FPS
@@ -92,6 +93,10 @@ class MembraneJump(gym.Env):
 
         self.world = b2World(gravity=[0,GRAVITY], doSleep=True)
         self.exterior_box = None
+        
+        self.basketL = None
+        self.basketR = None
+
         # Five linear actuators 
         self.actuator_list = []
         # Object to be manipulated
@@ -152,6 +157,20 @@ class MembraneJump(gym.Env):
     def _reset(self):
         self._destroy()
 
+        # Creating the baskets
+        self.basketL = self.world.CreateStaticBody(
+            position = (TARGET_POS[0]-BASKET_WIDTH/2, TARGET_POS[1]),
+            shapes = b2CircleShape(radius=BOX_WIDTH*ACTUATOR_TIP_SIZE/4)
+            )
+        self.basketR = self.world.CreateStaticBody(
+            position = (TARGET_POS[0]+BASKET_WIDTH/2, TARGET_POS[1]),
+            shapes = b2CircleShape(radius=BOX_WIDTH*ACTUATOR_TIP_SIZE/4)
+            )
+        self.basketL.color1 = (0,0,0)
+        self.basketL.color2 = (0,0,0)
+        self.basketR.color1 = (0,0,0)
+        self.basketR.color2 = (0,0,0)       
+           
         # Creating the Exterior Box that defines the 2D Plane
         self.exterior_box = self.world.CreateStaticBody(
             position = (0, 0),
@@ -176,7 +195,7 @@ class MembraneJump(gym.Env):
         #     self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_WIDTH-BOX_WIDTH*OBJ_POS_OFFSET),
         #     self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_HEIGHT-BOX_WIDTH*OBJ_POS_OFFSET)
         #     )
-        object_position = (self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_WIDTH-BOX_WIDTH*OBJ_POS_OFFSET), BOX_HEIGHT/3)
+        object_position = (self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_WIDTH-BOX_WIDTH*OBJ_POS_OFFSET), BOX_HEIGHT/5)
         self.object = self.world.CreateDynamicBody(
             position = object_position,
             fixtures = object_fixture,
@@ -219,7 +238,7 @@ class MembraneJump(gym.Env):
             
             self.actuator_list.append(actuator)
 
-        self.drawlist = self.actuator_list + [self.object]
+        self.drawlist = self.actuator_list + [self.object,self.basketL,self.basketR] 
 
         if self.with_linkage:
             # Creating the linkages that will form the semi-flexible membrane
@@ -342,8 +361,12 @@ class MembraneJump(gym.Env):
         for a in action:
             reward -= 0.05*np.clip(np.abs(a), 0, 1)
 
-        if np.abs(TARGET_POS[1]-object_pos[1]) < 1 and object_vel[1] < 0.05:
-            reward += 100
+        if np.abs(TARGET_POS[0]-object_pos[0]) < BASKET_WIDTH/2 and np.abs(TARGET_POS[1]-object_pos[1]) < 2: 
+            if object_vel[1] < 0:
+                reward += 200
+            else:
+                reward -= 300
+                
         done = False
         
         return np.array(state), reward, done, {}
@@ -364,9 +387,9 @@ class MembraneJump(gym.Env):
         # Actuator start position visualized
         self.viewer.draw_polyline( [(0, 0), (BOX_WIDTH, 0)], color=(1,0,1) )
 
-        # Target Position Visualized
-        self.viewer.draw_polyline( [(TARGET_POS[0], 0), (TARGET_POS[0], BOX_HEIGHT)], color=(1,0,0) )
-        self.viewer.draw_polyline( [(0, TARGET_POS[1]), (BOX_WIDTH, TARGET_POS[1])], color=(1,0,0) )
+#        # Target Position Visualized
+#        self.viewer.draw_polyline( [(TARGET_POS[0], 0), (TARGET_POS[0], BOX_HEIGHT)], color=(1,0,0) )
+#        self.viewer.draw_polyline( [(0, TARGET_POS[1]), (BOX_WIDTH, TARGET_POS[1])], color=(1,0,0) )
 
         # Exterior Box Visualized
         box_fixture = self.exterior_box.fixtures[0]
@@ -390,9 +413,9 @@ class MembraneJump(gym.Env):
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
-class MembraneWithoutLinkages(MembraneJump):
+class MembraneWithoutLinkages(MembraneBasket):
     with_linkage = False
 
 if __name__=="__main__":
-    env = MembraneJump()
+    env = MembraneBasket()
     s = env.reset()

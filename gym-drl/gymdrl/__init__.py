@@ -41,3 +41,10 @@ register(
     max_episode_steps=300,
     reward_threshold=300,
 )
+
+register(
+    id='MembraneBasket-v0',
+    entry_point='gymdrl.envs:MembraneBasket',
+    max_episode_steps=500,
+    reward_threshold=300,
+)
