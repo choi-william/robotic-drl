@@ -1,4 +1,5 @@
 import getch
+import numpy as np
 from gymdrl.envs.hardware.hardware_interface import set_servo_angles
 from gymdrl.envs.hardware.hardware_interface import set_servo_speeds
 from gymdrl.envs.hardware.hardware_interface import init_serial
@@ -84,14 +85,17 @@ actuator_map = {'q': (0, True, 1),
                 }
 
 reset_angles = [180, 180, 180, 180, 180]
+reset_speeds = [0.0, 0.0, 0.0, 0.0, 0.0]
 send_angles = [100, 100, 100, 100, 100]
 send_speeds = [0.0, 0.0, 0.0, 0.0, 0.0]
+smol_speeds = [0.1, 0.1, 0.1, 0.1, 0.1]
 MIN_ANGLE_INPUT = 0
 MAX_ANGLE_INPUT = 180
 
 MIN_SPEED_INPUT = -1.0
 MAX_SPEED_INPUT = 1.0
 
+spd = 5
 
 if __name__ == '__main__':
 
@@ -108,6 +112,26 @@ if __name__ == '__main__':
                 continue
             if key == '=':
                 set_servo_angles(ser, reset_angles)
+                continue
+            if key == '1':
+                set_servo_speeds(ser, smol_speeds)
+                print(smol_speeds)
+                continue
+            if key == '!':
+                set_servo_speeds(ser, -np.array(smol_speeds))
+                print(-np.array(smol_speeds))
+                continue
+            if key == '2':
+                set_servo_speeds(ser, np.array(smol_speeds)*spd)
+                print(np.array(smol_speeds)*spd)
+                continue
+            if key == '@':
+                set_servo_speeds(ser, np.array(smol_speeds)*-spd)
+                print(np.array(smol_speeds)*-spd)
+                continue
+            if key == '`':
+                set_servo_speeds(ser, reset_speeds)
+                print(reset_speeds)
                 continue
             try:
                 actuator, do_set_pos, direction = actuator_map[key]

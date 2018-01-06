@@ -294,6 +294,7 @@ class MembraneHardware(gym.Env):
 
         # For debug puroposes:
         # print('OUC pos: {:.2f},{:.2f}'.format(state[0], state[1]))
+        # print('actuator vel: {:.2f},{:.2f},{:.2f},{:.2f},{:.2f}'.format(state[9], state[10], state[11], state[12], state[13]))
         # print('actuator pos: {:.2f},{:.2f},{:.2f},{:.2f},{:.2f}'.format(state[4], state[5], state[6], state[7], state[8]))
 
         # Set motor speeds from the action outputs
