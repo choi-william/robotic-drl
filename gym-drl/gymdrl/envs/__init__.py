@@ -4,3 +4,4 @@ from gymdrl.envs.membrane_v1 import Membrane
 from gymdrl.envs.membrane_v1 import MembraneWithoutLinkages
 from gymdrl.envs.double_joint import DoubleJoint
 from gymdrl.envs.hardware_membrane import MembraneHardware
+from gymdrl.envs.membrane_calibration import MembraneCalibration
