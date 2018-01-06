@@ -48,3 +48,9 @@ register(
     max_episode_steps=300,
     reward_threshold=300,
 )
+register(
+    id='HardwareSimulation-v0',
+    entry_point='gymdrl.envs:HardwareSimulation',
+    max_episode_steps=300,
+    reward_threshold=300,
+)

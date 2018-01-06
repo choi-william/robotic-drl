@@ -35,7 +35,7 @@ ACTUATOR_VEL_STDDEV = 0 # Nothing set currently
 # Reward Calculation Parameters #
 #################################
 # Desired Object Position
-TARGET_POS = [24,9]
+TARGET_POS = [21,5]
 
 MAX_DIST_TO_TARGET = np.sqrt(np.square(membrane_base.BOX_WIDTH) + np.square(membrane_base.BOX_HEIGHT))
 # Maximum distance adjacent actuators can be apart veritically due to the membrane
@@ -52,7 +52,7 @@ TEMPH = membrane_base.BOX_HEIGHT_BELOW_ACTUATORS + membrane_base.BOX_HEIGHT
 VIEWPORT_W = int(1000*TEMPW / (TEMPW + TEMPH))
 VIEWPORT_H = int(1000*TEMPH / (TEMPW + TEMPH))
 
-class MembraneCalibration(gym.Env):
+class HardwareSimulation(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : FPS
@@ -111,8 +111,6 @@ class MembraneCalibration(gym.Env):
         # Set motor speeds
         for i, actuator in enumerate(self.actuator_list):
             actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
-            actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * 0.5)
-
 
         # Move forward one frame
         self.world.Step(1.0/FPS, 6*30, 2*30)
@@ -159,26 +157,28 @@ class MembraneCalibration(gym.Env):
             2*(actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
 
-        print(actuator_vel[0]/membrane_base.MOTOR_SPEED)
         assert len(state)==14            
 
         # Rewards
         reward = 0
-        shaping = -200*np.abs(TARGET_POS[1]-object_pos[1])/membrane_base.BOX_HEIGHT - 100*np.abs(state[2]) + 300*(object_pos[1] - max(actuator_pos))/TARGET_POS[1]
-
-        if (object_pos[1] - max(actuator_pos)) > 4:
-            shaping += 20
+        shaping = \
+        -200*np.abs(TARGET_POS[0]-object_pos[0])/membrane_base.BOX_WIDTH  \
+        -200*np.abs(TARGET_POS[1]-object_pos[1])/membrane_base.BOX_HEIGHT  \
+        - 50*np.abs(state[2]) \
+        - 50*np.abs(state[3])
         
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
 
+        if (np.abs(object_pos[0] - TARGET_POS[0])) < 0.5:
+            if (np.abs(object_pos[1] - TARGET_POS[1])) < 0.5:
+                reward += 50
+
         # Reduce reward for using the motor
         for a in action:
-            reward -= 0.05*np.clip(np.abs(a), 0, 1)
+            reward -= 1*np.clip(np.abs(a), 0, 1)
 
-        if np.abs(TARGET_POS[1]-object_pos[1]) < 1 and object_vel[1] < 0.05:
-            reward += 100
         done = False
         
         return np.array(state), reward, done, {}

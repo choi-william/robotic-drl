@@ -3,12 +3,12 @@ from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonS
 
 from gym.envs.classic_control import rendering
 
-GRAVITY = -30
+GRAVITY = -65
 
 ##########################
 # Exterior Box Dimension #
 ##########################
-BOX_WIDTH = 30 
+BOX_WIDTH = 26.7 
 BOX_HEIGHT = 30
 BOX_HEIGHT_BELOW_ACTUATORS = 5
 EXT_BOX_POLY = [
@@ -21,13 +21,13 @@ EXT_BOX_POLY = [
 ###################
 # Body Dimensions #
 ###################
-OBJ_SIZE = 4.5 # real dimension
-OBJ_POS_OFFSET = 3 # real dimension; should be greater than half the object size
-ACTUATOR_TIP_SIZE = 1.5 # real dimension 
+OBJ_SIZE = 4.0 # real dimension
+OBJ_POS_OFFSET = 2.0 # real dimension; should be greater than half the object size
+ACTUATOR_TIP_SIZE = 1.0 # real dimension 
 # Distance between the wall and the center of the first actuator
-BOX_SIDE_OFFSET = 0.9 # real dimension
+BOX_SIDE_OFFSET = 1.3 # real dimension
 LINK_WIDTH = 6 # real dimension
-LINK_HEIGHT = 1.2 # real dimension
+LINK_HEIGHT = 1.0 # real dimension
 
 # Do not modify
 GAP = BOX_WIDTH*(1-BOX_SIDE_OFFSET/BOX_WIDTH*2)/4
@@ -36,10 +36,11 @@ GAP = BOX_WIDTH*(1-BOX_SIDE_OFFSET/BOX_WIDTH*2)/4
 ####################
 # Motor Parameters #
 ####################
-MOTOR_SPEED = 20    # m/s
+MOTOR_SPEED = 100    # m/s
 
 ###OTHER####
-ACTUATOR_TRANSLATION_MAX = BOX_HEIGHT/3
+UPPER_TRANSLATION_MIDDLE_JOINT = 10
+ACTUATOR_TRANSLATION_MAX = 6.5
 ACTUATOR_TRANSLATION_MEAN = ACTUATOR_TRANSLATION_MAX/2
 ACTUATOR_TRANSLATION_AMP = ACTUATOR_TRANSLATION_MAX/2
 
@@ -70,9 +71,9 @@ def reset_helper(env_obj):
     # Creating the object to manipulate
     object_fixture = b2FixtureDef(
         shape = b2CircleShape(radius=OBJ_SIZE/2),
-        density = 0.3,
-        friction = 0.6,
-        restitution = 0.0
+        density = 0.01,
+        friction = 0.05,
+        restitution = 0.2
         )
     # Randomizing object's initial position
     # object_position = (
@@ -83,7 +84,7 @@ def reset_helper(env_obj):
     #     env_obj.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_WIDTH-BOX_WIDTH*OBJ_POS_OFFSET),
     #     env_obj.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_HEIGHT-BOX_WIDTH*OBJ_POS_OFFSET)
     #     )
-    object_position = (BOX_WIDTH/4, BOX_HEIGHT/3)
+    object_position = (BOX_WIDTH/2, 3)
     env_obj.object = env_obj.world.CreateDynamicBody(
         position = object_position,
         fixtures = object_fixture,
@@ -98,7 +99,7 @@ def reset_helper(env_obj):
     actuator_fixture = b2FixtureDef(
         shape = b2CircleShape(radius=ACTUATOR_TIP_SIZE/2),
         density = 1,
-        friction = 0.6,
+        friction = 0.7,
         restitution = 0.0,
         groupIndex = -1
         )
@@ -119,7 +120,7 @@ def reset_helper(env_obj):
             lowerTranslation = 0,
             upperTranslation = ACTUATOR_TRANSLATION_MAX,
             enableLimit = True,
-            maxMotorForce = 100000.0,
+            maxMotorForce = 10000.0,
             motorSpeed = 0,
             enableMotor = True
             )
@@ -134,7 +135,7 @@ def reset_helper(env_obj):
 	    link_fixture = b2FixtureDef(
 	        shape=b2PolygonShape(box=(LINK_WIDTH/2, LINK_HEIGHT/2)),
 	        density=1, 
-	        friction = 0.6,
+	        friction = 0.0,
 	        restitution = 0.0,
 	        groupIndex = -1 # neg index to prevent collision
 	        )
@@ -176,7 +177,7 @@ def reset_helper(env_obj):
 	            anchor = (link_right.position.x-(LINK_WIDTH/2+LINK_HEIGHT/2), link_right.position.y),
 	            axis = (1,0),
 	            lowerTranslation = 0,
-	            upperTranslation = LINK_WIDTH*2/3,
+	            upperTranslation = UPPER_TRANSLATION_MIDDLE_JOINT,
 	            enableLimit = True
 	            )
 	    # Adding linkages to the drawlist
