@@ -1,4 +1,5 @@
 import serial
+import numpy as np
 
 # Initialize serial port
 PORT = '/dev/ttyUSB0'
@@ -23,6 +24,7 @@ def init_serial():
 # sample input: [0.5, 0, 1, -0.2, 0.3] MUST BE BETWEEN MIN_SPEED_INPUT AND MAX_SPEED_INPUT
 def set_servo_speeds(ser, servo_speeds):
     # print(servo_speeds)
+    servo_speeds = np.array(servo_speeds)/2
     encoded_speed_bytes = encode_bytes(servo_speeds, MIN_SPEED_INPUT, MAX_SPEED_INPUT)
     command = [S_CHAR] + encoded_speed_bytes + [NEWLINE_CHAR]
     # print(command)

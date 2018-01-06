@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import json
 import cmath
+import time
 
 # Global definitions
 epsilon = 1e-4
@@ -337,6 +338,8 @@ def track_objects(img, track_params, show_opening=False):
 #     -> 'q' to quit
 #     -> '--load_params' - load previous parameters
 # '-a' runs code for the arena
+#     -> 'r' shows rotation
+#     -> 'v' writes timestamps and some variables, used for calibration
 # '--camera_config <filename>' use a custom camera configuration
 #
 # Params for ivan's testing:
@@ -346,7 +349,7 @@ if __name__ == '__main__':
     import sys
     import getopt
 
-    args, img_mask = getopt.getopt(sys.argv[1:], 'uta', ['camera_config=', 'load_params=', 'ouc_params=',
+    args, img_mask = getopt.getopt(sys.argv[1:], 'utarv', ['camera_config=', 'load_params=', 'ouc_params=',
                                                          'ouc_top_params=', 'ouc_bottom_params=', 'actuator_params='])
     args = dict(args)
     args.setdefault('--camera_config', 'config/camera_arena.json')
@@ -377,6 +380,8 @@ if __name__ == '__main__':
     u_flag = args.get('-u')
     t_flag = args.get('-t')
     a_flag = args.get('-a')
+    r_flag = args.get('-r')
+    v_flag = args.get('-v')
 
     if t_flag is not None:
         # Calibrate tracking with colour trackbars
@@ -471,6 +476,8 @@ if __name__ == '__main__':
         cv2.imwrite(image_filename + "_undistorted" + image_ext, output)
     elif a_flag is not None:
         # Arena tracking:
+
+        start_time = time.time()
 
         # Variables used by training:
         ouc_x = 0
@@ -592,9 +599,13 @@ if __name__ == '__main__':
                 draw_box(camera_capture, actuator_x1[i], actuator_y1[i], actuator_x2[i], actuator_y2[i],
                          (128, 128, 0), 2)
 
-            text = 'Angle: {0.real:.1f}'.format(ouc_angle)
+            if r_flag is not None:
+                text = 'Angle: {0.real:.1f}'.format(ouc_angle)
+                cv2.putText(camera_capture, text, (0, 30), 2, 1, (0, 255, 0), 2)
 
-            cv2.putText(camera_capture, text, (0, 30), 2, 1, (0, 255, 0), 2)
+            if v_flag is not None:
+                print('{0.real:.2f}, {1}'.format(time.time() - start_time, ouc_y))
+
 
             cv2.imshow('img', camera_capture)
             in_read = cv2.waitKey(1) & 0xFF
