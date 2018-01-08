@@ -273,6 +273,10 @@ def train(sess, env, args, actor, critic, actor_noise):
 
     for i in range(int(args['max_episodes'])):
 
+        if (args['random_policy']):
+            sess.run(tf.global_variables_initializer())
+
+
         s = env.reset()
 
         ep_reward = 0
@@ -433,10 +437,12 @@ if __name__ == '__main__':
     parser.add_argument('--output-name', help='name of the saved model', default='unnamed')
     parser.add_argument('--input-name', help='name of the saved model', default=None)
     parser.add_argument('--fresh-train', help='render the gym env', action='store_true')
+    parser.add_argument('--random-policy', help='render the gym env', action='store_true')
 
     parser.set_defaults(fresh_train=False)
     parser.set_defaults(render_env=True)
     parser.set_defaults(use_gym_monitor=False)
+    parser.set_defaults(random_policy=False)
 
     args = vars(parser.parse_args())
     
