@@ -35,13 +35,13 @@ ACTUATOR_VEL_STDDEV = 0 # Nothing set currently
 # Reward Calculation Parameters #
 #################################
 # Desired Object Position
-TARGET_POS = [21,5]
 
 MAX_DIST_TO_TARGET = np.sqrt(np.square(membrane_base.BOX_WIDTH) + np.square(membrane_base.BOX_HEIGHT))
 # Maximum distance adjacent actuators can be apart veritically due to the membrane
 MAX_VERT_DIST_BETWEEN_ACTUATORS = membrane_base.BOX_WIDTH/4
 # Maximum steps at the target before the episode is deemed to be successfully completed
 MAX_TARGET_COUNT = 100
+
 
 ########################
 # Rendering Parameters #
@@ -64,7 +64,7 @@ class HardwareSimulation(gym.Env):
     def __init__(self):
         self._seed()
         self.viewer = None # to be used later for rendering
-       
+        self.target_pos = None
         membrane_base.init_helper(self)
 
         # Drawlist for rendering
@@ -72,7 +72,7 @@ class HardwareSimulation(gym.Env):
 
         # Observation Space 
         # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
-        high = np.array([np.inf]*14)
+        high = np.array([np.inf]*16)
         self.observation_space = spaces.Box(low=-high,high=high)
 
         # Continuous action space; one for each linear actuator (5 total)
@@ -103,6 +103,8 @@ class HardwareSimulation(gym.Env):
         self._destroy()
 
         membrane_base.reset_helper(self)
+
+        self.target_pos = [np.random.rand()*(membrane_base.BOX_WIDTH-membrane_base.OBJ_SIZE)+membrane_base.OBJ_SIZE/2,5]
         
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
@@ -141,6 +143,8 @@ class HardwareSimulation(gym.Env):
 
         # Observation space (state)
         state = [
+            (self.target_pos[0]-membrane_base.BOX_WIDTH/2)/(membrane_base.BOX_WIDTH/2),
+            (self.target_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
             (object_pos[0]-membrane_base.BOX_WIDTH/2)/(membrane_base.BOX_WIDTH/2),
             (object_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
             2*object_vel[0]/membrane_base.MOTOR_SPEED,
@@ -157,13 +161,13 @@ class HardwareSimulation(gym.Env):
             2*(actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
 
-        assert len(state)==14            
+        assert len(state)==16            
 
         # Rewards
         reward = 0
         shaping = \
-        -200*np.abs(TARGET_POS[0]-object_pos[0])/membrane_base.BOX_WIDTH  \
-        -200*np.abs(TARGET_POS[1]-object_pos[1])/membrane_base.BOX_HEIGHT  \
+        -200*np.abs(self.target_pos[0]-object_pos[0])/membrane_base.BOX_WIDTH  \
+        -200*np.abs(self.target_pos[1]-object_pos[1])/membrane_base.BOX_HEIGHT  \
         - 50*np.abs(state[2]) \
         - 50*np.abs(state[3])
         
@@ -171,8 +175,8 @@ class HardwareSimulation(gym.Env):
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
 
-        if (np.abs(object_pos[0] - TARGET_POS[0])) < 0.5:
-            if (np.abs(object_pos[1] - TARGET_POS[1])) < 0.5:
+        if (np.abs(object_pos[0] - self.target_pos[0])) < 0.5:
+            if (np.abs(object_pos[1] - self.target_pos[1])) < 0.5:
                 reward += 50
 
         # Reduce reward for using the motor
@@ -195,12 +199,35 @@ class HardwareSimulation(gym.Env):
             self.viewer.set_bounds(0, membrane_base.BOX_WIDTH, -membrane_base.BOX_HEIGHT_BELOW_ACTUATORS, membrane_base.BOX_HEIGHT)
 
         # Target Position Visualized
-        self.viewer.draw_polyline( [(TARGET_POS[0], 0), (TARGET_POS[0], membrane_base.BOX_HEIGHT)], color=(1,0,0) )
-        self.viewer.draw_polyline( [(0, TARGET_POS[1]), (membrane_base.BOX_WIDTH, TARGET_POS[1])], color=(1,0,0) )
+        self.viewer.draw_polyline( [(self.target_pos[0], 0), (self.target_pos[0], membrane_base.BOX_HEIGHT)], color=(1,0,0) )
+        self.viewer.draw_polyline( [(0, self.target_pos[1]), (membrane_base.BOX_WIDTH, self.target_pos[1])], color=(1,0,0) )
 
         membrane_base.render_helper(self)
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
+
+
+def programmed_policy(state):
+
+    FAST_SPEED = 1;
+    MEDIUM_SPEED = 0.5;
+    SLOW_SPEED = 0.1;
+
+
+    ACTUATOR_START = membrane_base.BOX_SIDE_OFFSET
+    ACTUATOR_SPACING = membrane_base.GAP
+
+    act_pos = [state[i] for i in range(6,11)]
+
+    p = (self.object.position.x-ACTUATOR_START)/ACTUATOR_SPACING
+    action = -FAST_SPEED*np.ones(5)
+
+    if (TARGET_POS[0]-object_pos[0]) > 0:
+        #move right
+        action[floor(p)] = MEDIUM_SPEED
+    else:
+        #move left
+        action[ceil(p)] = MEDIUM_SPEED
 
 if __name__=="__main__":
     env = Membrane()
