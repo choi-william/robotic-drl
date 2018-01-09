@@ -17,8 +17,8 @@ epsilon = 1E-4 # used for float comparisons
 PIX2MM = 300 / 425.0  # Scaling factor
 MM2PIX = 1 / PIX2MM
 
-# Desired Object Position
-TARGET_POS = [230, 100]  # in mm
+# Desired Object Position from bottom left corner
+TARGET_POS = [210, 50]  # in mm
 
 VIEWPORT_W = 640
 VIEWPORT_H = 480
@@ -51,7 +51,7 @@ ACTUATOR_TRANSLATION_MAX = 65  # hardware_param
 ACTUATOR_TRANSLATION_MEAN = ACTUATOR_TRANSLATION_MAX / 2
 ACTUATOR_TRANSLATION_AMP = ACTUATOR_TRANSLATION_MAX / 2
 
-MAX_SPEED = 1600  # mm/s assumed maximum motor speed
+MAX_SPEED = 160  # mm/s assumed maximum motor speed
 
 ########################
 # Rendering Parameters #
@@ -111,9 +111,11 @@ class MembraneHardware(gym.Env):
     }
 
     def __init__(self):
+        self.count = 0
         self._seed()
         self.viewer = None  # to be used later for rendering
 
+        self.prev_state = None
         # Load camera config
         try:
             f_cam_conf = open(CAMERA_CONFIG_FILENAME, 'r')
@@ -201,15 +203,32 @@ class MembraneHardware(gym.Env):
         self.object_at_target_count = 0
 
         # Set lowest position for actuators
-        reset_values = [125, 105, 90, 105, 125]
+        # reset_values = [125, 105, 90, 105, 125]
+
+        # Reset used to randomize the new position
+        reset_speeds = [0.5 + np.random.rand() / 2,
+                        0.5 + np.random.rand() / 2,
+                        0.5 + np.random.rand() / 2,
+                        0.5 + np.random.rand() / 2,
+                        0.5 + np.random.rand() / 2]
+        hardware_interface.set_servo_speeds(self.serial, reset_speeds)
+        time.sleep(0.5)
+        reset_values = [90 + np.random.rand() * 50, 90 + np.random.rand() * 50, 90 + np.random.rand() * 50,
+                        90 + np.random.rand() * 50, 90 + np.random.rand() * 50]
         hardware_interface.set_servo_angles(self.serial, reset_values)
-        time.sleep(3)
+        time.sleep(1)
 
         self.time_previous = time.time()
 
         return self._step(np.array([0, 0, 0, 0, 0]))[0]  # action: zero motor speed
 
     def _step(self, action):
+
+        # Uncomment to use a programmed policy
+        # if self.prev_state is not None:
+        #     action = self.programmed_policy(self.prev_state)
+
+        self.count = self.count + 1
         # Totally recall previous state
         ouc_x = self.previous_pos[0]
         ouc_y = self.previous_pos[1]
@@ -290,6 +309,8 @@ class MembraneHardware(gym.Env):
             np.clip(actuator_vel[3] / MAX_SPEED, -1, 1),
             np.clip(actuator_vel[4] / MAX_SPEED, -1, 1)
         ]
+        self.prev_state = state
+
         assert len(state) == 14
 
         # For debug puroposes:
@@ -313,42 +334,31 @@ class MembraneHardware(gym.Env):
         #     send_values[0], send_values[1], send_values[2], send_values[3], send_values[4]))
         hardware_interface.set_servo_speeds(self.serial, send_values)
 
-
         # Rewards
         # dist_to_target = TARGET_POS[0]-self.object.position.x
-        dist_to_target = np.sqrt(np.square(TARGET_POS[0] - ouc_x) + np.square(TARGET_POS[1] - ouc_y))
-        reward = 0
-        shaping = \
-            -150 * dist_to_target / MAX_DIST_TO_TARGET \
-            - 150 * np.sqrt(state[2] * state[2] + state[3] * state[3])
+        # dist_to_target = np.sqrt(np.square(TARGET_POS[0] - ouc_x) + np.square(TARGET_POS[1] - ouc_y))
+        # reward = 0
 
-        # Check if the objects at target position
-        if dist_to_target < MIN_DIST_TO_TARGET:
-            self.object_at_target = True
-            self.object_at_target_count += 1
-            shaping += 20
-        else:
-            self.object_at_target = False
-            self.object_at_target_count = 0
+        reward = \
+            -200 * np.abs(TARGET_POS[0] - ouc_x) / BOX_WIDTH \
+            -200 * np.abs(TARGET_POS[1] - ouc_y) / BOX_HEIGHT \
+            -50 * np.abs(state[2]) \
+            -50 * np.abs(state[3])
 
-        if self.prev_shaping is not None:
-            reward = shaping - self.prev_shaping
-        self.prev_shaping = shaping
+        # if self.prev_shaping is not None:
+        #     reward = shaping - self.prev_shaping
+        # self.prev_shaping = shaping
+
+        if (np.abs(TARGET_POS[0] - ouc_x) < 20):
+            if (np.abs(TARGET_POS[1] - ouc_y) < 20):
+                reward += 50
 
         # Reduce reward for using the motor
         for a in action:
-            reward -= 0.05 * np.clip(np.abs(a), 0, 1)
-
-        # Reward for staying at target position
-        reward += 50 * self.object_at_target_count / MAX_TARGET_COUNT
+            reward -= 1 * np.clip(np.abs(a), 0, 1)
 
         done = False
 
-        # If object is at the target position the task is complete
-        obj_vel_magnitude = np.abs(np.sqrt(np.square(object_vel[0]) + np.square(object_vel[1])))
-        if dist_to_target < 1 and obj_vel_magnitude < 1 and self.object_at_target_count >= MAX_TARGET_COUNT:
-            done = True
-            reward += 100
 
         return np.array(state), reward, done, {}
 
@@ -371,13 +381,45 @@ class MembraneHardware(gym.Env):
                                    0.5, make_label=False)
 
             # Draw target position
-            target_x = int(TARGET_POS[0] * MM2PIX + BOX_TRIM_LEFT)
-            target_y = VIEWPORT_H - int(TARGET_POS[1] * MM2PIX + BOX_TRIM_BOTTOM)
+            target_x = int((TARGET_POS[0] + BOX_TRIM_LEFT)* MM2PIX)
+            target_y = VIEWPORT_H - int((TARGET_POS[1] + BOX_TRIM_BOTTOM) * MM2PIX)
             capture.draw_crosshair(self.camera_capture, target_x, target_y, (0, 0, 255), CAMERA_CONFIG, make_label=False)
 
             cv2.imshow('Hardware Membrane', self.camera_capture)
             cv2.waitKey(10)
 
+    def programmed_policy(self, state):
+
+        FAST_SPEED = 1
+        MEDIUM_SPEED = 0.5
+        SLOW_SPEED = 0.1
+
+
+        ACTUATOR_START= (BOX_WIDTH - 60*4 ) / 2
+        ACTUATOR_SPACING = 60
+
+        act_pos = [state[i] for i in range(6,11)]
+
+        p = (self.previous_pos[0]-ACTUATOR_START)/ACTUATOR_SPACING
+        action = -MEDIUM_SPEED*np.ones(5)
+
+        if (TARGET_POS[0]-self.previous_pos[0]) > 0:
+            #move right
+            b=int(np.floor(p))
+            action[b] = SLOW_SPEED*2
+            if b-1 >=0:
+                action[b-1] = SLOW_SPEED * 3
+        else:
+            #move left
+            action[int(np.ceil(p))] = SLOW_SPEED*2
+            if int(np.ceil(p)) == 4:
+                action[int(np.ceil(p))] = SLOW_SPEED
+
+        if self.previous_pos[0] > BOX_WIDTH/2:
+            action[2]=MEDIUM_SPEED
+
+
+        return action
 
 if __name__ == "__main__":
     env = MembraneHardware()

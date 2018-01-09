@@ -13,11 +13,11 @@
 #define INPUT_ACTUATOR_PIN_4 A4
 #define INPUT_ACTUATOR_PIN_5 A5
 
-#define HIGH_ANGLE 60
-#define LOW_ANGLE 0
+#define HIGH_ANGLE 90
+#define LOW_ANGLE 150
 
-#define BIT_TO_ANGLE_FACTOR 180.0/255.0
-#define MID_BIT 127.5
+#define BIT_TO_ANGLE_FACTOR 180.0/1023.0
+#define MID_BIT 511.5
 
 
 #define CONTROL_TYPE 0
@@ -52,11 +52,11 @@ void loop() {
     if (CONTROL_TYPE == 1) { //speed control
 
       //between -255 and 255
-      int decoded_speed1 = round(2*(value1-MID_BIT)); 
-      int decoded_speed2 = round(2*(value2-MID_BIT));
-      int decoded_speed3 = round(2*(value3-MID_BIT));
-      int decoded_speed4 = round(2*(value4-MID_BIT));
-      int decoded_speed5 = round(2*(value5-MID_BIT));
+      int decoded_speed1 = round((value1-MID_BIT)/2); 
+      int decoded_speed2 = round((value2-MID_BIT)/2);
+      int decoded_speed3 = round((value3-MID_BIT)/2);
+      int decoded_speed4 = round((value4-MID_BIT)/2);
+      int decoded_speed5 = round((value5-MID_BIT)/2);
 
       //either 180 or 0
       int target_angle1 = (decoded_speed1 > 0) ? HIGH_ANGLE : LOW_ANGLE;
