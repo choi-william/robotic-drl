@@ -213,10 +213,13 @@ class MembraneHardware(gym.Env):
                         0.5 + np.random.rand() / 2]
         hardware_interface.set_servo_speeds(self.serial, reset_speeds)
         time.sleep(0.5)
-        reset_values = [90 + np.random.rand() * 50, 90 + np.random.rand() * 50, 90 + np.random.rand() * 50,
-                        90 + np.random.rand() * 50, 90 + np.random.rand() * 50]
+        reset_values = [90 + np.random.rand() * 40,
+                        90 + np.random.rand() * 40,
+                        90 + np.random.rand() * 40,
+                        90 + np.random.rand() * 40,
+                        90 + np.random.rand() * 40]
         hardware_interface.set_servo_angles(self.serial, reset_values)
-        time.sleep(1)
+        time.sleep(0.5)
 
         self.time_previous = time.time()
 
@@ -330,6 +333,8 @@ class MembraneHardware(gym.Env):
             if abs(state[4+i] + 1) < epsilon:
                 send_values[i] = np.clip([send_values[i]], 0.0, 1.0)[0]
 
+        # Temporary speed reduction until retrain
+        send_values = np.array(send_values) / 3.0
         # print('Send speeds: {:.2f},{:.2f},{:.2f},{:.2f},{:.2f}'.format(
         #     send_values[0], send_values[1], send_values[2], send_values[3], send_values[4]))
         hardware_interface.set_servo_speeds(self.serial, send_values)
@@ -337,28 +342,26 @@ class MembraneHardware(gym.Env):
         # Rewards
         # dist_to_target = TARGET_POS[0]-self.object.position.x
         # dist_to_target = np.sqrt(np.square(TARGET_POS[0] - ouc_x) + np.square(TARGET_POS[1] - ouc_y))
-        # reward = 0
 
-        reward = \
-            -200 * np.abs(TARGET_POS[0] - ouc_x) / BOX_WIDTH \
-            -200 * np.abs(TARGET_POS[1] - ouc_y) / BOX_HEIGHT \
-            -50 * np.abs(state[2]) \
-            -50 * np.abs(state[3])
+        reward = 0
+        shaping = \
+            - 200 * np.abs(TARGET_POS[0] - ouc_x) / BOX_WIDTH \
+            - 200 * np.abs(TARGET_POS[1] - ouc_y) / BOX_HEIGHT \
+            - 50 * np.abs(state[2]) \
+            - 50 * np.abs(state[3])
 
-        # if self.prev_shaping is not None:
-        #     reward = shaping - self.prev_shaping
-        # self.prev_shaping = shaping
+        if self.prev_shaping is not None:
+            reward = shaping - self.prev_shaping
+        self.prev_shaping = shaping
 
-        if (np.abs(TARGET_POS[0] - ouc_x) < 20):
-            if (np.abs(TARGET_POS[1] - ouc_y) < 20):
+        if (np.abs(ouc_x - TARGET_POS[0])) < 15:
+            if (np.abs(ouc_y - TARGET_POS[1])) < 15:
                 reward += 50
-
         # Reduce reward for using the motor
         for a in action:
             reward -= 1 * np.clip(np.abs(a), 0, 1)
 
         done = False
-
 
         return np.array(state), reward, done, {}
 

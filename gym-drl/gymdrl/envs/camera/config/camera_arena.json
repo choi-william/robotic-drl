@@ -16,7 +16,7 @@
             1.0
         ]
     ],
-    "camera_port": 1,
+    "camera_port": 0,
     "dist_coefs": [
         0.410344222,
         -3.49531706,
