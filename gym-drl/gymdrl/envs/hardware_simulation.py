@@ -69,6 +69,8 @@ class HardwareSimulation(gym.Env):
 
         # Drawlist for rendering
         self.drawlist = []
+        
+        self.prev_state = None
 
         # Observation Space 
         # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
@@ -109,6 +111,9 @@ class HardwareSimulation(gym.Env):
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
     def _step(self, action):
+        
+#        if self.prev_state is not None:
+#            action = self.programmed_policy(self.prev_state)
 
         # Set motor speeds
         for i, actuator in enumerate(self.actuator_list):
@@ -160,6 +165,7 @@ class HardwareSimulation(gym.Env):
             2*(actuator_vel[3])/membrane_base.MOTOR_SPEED,
             2*(actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
+        self.prev_state = state
 
         assert len(state)==16            
 
@@ -207,27 +213,35 @@ class HardwareSimulation(gym.Env):
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
 
-def programmed_policy(state):
+    def programmed_policy(self,state):
 
-    FAST_SPEED = 1;
-    MEDIUM_SPEED = 0.5;
-    SLOW_SPEED = 0.1;
+        FAST_SPEED = 1;
+        MEDIUM_SPEED = 0.5;
+        SLOW_SPEED = 0.1;
+        VERY_SLOW_SPEED = 0.05;
 
+        ACTUATOR_START = membrane_base.BOX_SIDE_OFFSET
+        ACTUATOR_SPACING = membrane_base.GAP
 
-    ACTUATOR_START = membrane_base.BOX_SIDE_OFFSET
-    ACTUATOR_SPACING = membrane_base.GAP
+        p = (self.object.position.x-ACTUATOR_START)/ACTUATOR_SPACING
+        
+        q = (self.target_pos[0]-ACTUATOR_START)/ACTUATOR_SPACING
 
-    act_pos = [state[i] for i in range(6,11)]
+        action = -SLOW_SPEED*np.ones(5)
 
-    p = (self.object.position.x-ACTUATOR_START)/ACTUATOR_SPACING
-    action = -FAST_SPEED*np.ones(5)
-
-    if (TARGET_POS[0]-object_pos[0]) > 0:
-        #move right
-        action[floor(p)] = MEDIUM_SPEED
-    else:
-        #move left
-        action[ceil(p)] = MEDIUM_SPEED
+        if (self.target_pos[0]-self.object.position.x) > 0:
+            #move right
+            action[int(np.floor(p))] = VERY_SLOW_SPEED
+            if int(np.ceil(q)+1) <= 4:
+                action[int(np.ceil(q)+1)] = VERY_SLOW_SPEED
+        else:
+            #move left
+            if int(np.ceil(q)-1) >= 0:
+                action[int(np.ceil(q)-1)] = VERY_SLOW_SPEED
+                
+            action[int(np.ceil(p))] = VERY_SLOW_SPEED
+            
+        return action
 
 if __name__=="__main__":
     env = Membrane()

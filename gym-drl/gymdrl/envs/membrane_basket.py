@@ -97,6 +97,8 @@ class MembraneBasket(gym.Env):
         self.basketL = None
         self.basketR = None
 
+        self.prev_state = None
+        
         # Five linear actuators 
         self.actuator_list = []
         # Object to be manipulated
@@ -296,6 +298,9 @@ class MembraneBasket(gym.Env):
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
     def _step(self, action):
+        
+#        if self.prev_state is not None:
+#            action = self.programmed_policy(self.prev_state)        
         # Set motor speeds
         for i, actuator in enumerate(self.actuator_list):
             actuator.joint.motorSpeed = float(MOTOR_SPEED * np.clip(action[i], -1, 1))
@@ -344,6 +349,7 @@ class MembraneBasket(gym.Env):
             (actuator_vel[3])/MOTOR_SPEED,
             (actuator_vel[4])/MOTOR_SPEED,
         ]
+        self.prev_state = state
         assert len(state)==14            
 
         # Rewards
@@ -413,6 +419,41 @@ class MembraneBasket(gym.Env):
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
+    def programmed_policy(self,state):
+
+        FAST_SPEED = 1;
+        MEDIUM_SPEED = 0.5;
+        SLOW_SPEED = 0.1;
+        VERY_SLOW_SPEED = 0.05;
+
+        ACTUATOR_START = BOX_SIDE_OFFSET*BOX_WIDTH
+        ACTUATOR_SPACING = GAP*BOX_WIDTH
+        
+        SIDE_X = 25
+        LAUNCH_X = 19
+
+        p = (self.object.position.x-ACTUATOR_START)/(ACTUATOR_SPACING)
+        
+        q = (LAUNCH_X-ACTUATOR_START)/ACTUATOR_SPACING
+
+        action = -SLOW_SPEED*np.ones(5)
+
+        if (SIDE_X-self.object.position.x) > 0:
+            #move right
+            action[int(np.floor(p))] = MEDIUM_SPEED
+
+        else:
+            #move left
+            action[int(np.ceil(p))] = MEDIUM_SPEED
+
+        if (self.object.linearVelocity.x < 0 and self.object.position.x < LAUNCH_X):
+            action[4] = FAST_SPEED
+            action[3] = FAST_SPEED       
+            action[2] = FAST_SPEED       
+        
+                           
+        return action    
+    
 class MembraneWithoutLinkages(MembraneBasket):
     with_linkage = False
 

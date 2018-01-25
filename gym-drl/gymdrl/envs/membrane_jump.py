@@ -90,6 +90,7 @@ class MembraneJump(gym.Env):
         self._seed()
         self.viewer = None # to be used later for rendering
 
+        self.count = 0
         self.world = b2World(gravity=[0,GRAVITY], doSleep=True)
         self.exterior_box = None
         # Five linear actuators 
@@ -100,6 +101,8 @@ class MembraneJump(gym.Env):
         if self.with_linkage:
             self.link_left_list = [] # four links
             self.link_right_list = [] # four links
+            
+        self.prev_state = None
 
         # Drawlist for rendering
         self.drawlist = []
@@ -165,7 +168,7 @@ class MembraneJump(gym.Env):
             shape = b2CircleShape(radius=BOX_WIDTH*OBJ_SIZE/2),
             density = 0.3,
             friction = 0.6,
-            restitution = 0.0
+            restitution = 0.5
             )
         # Randomizing object's initial position
         # object_position = (
@@ -212,7 +215,7 @@ class MembraneJump(gym.Env):
                 lowerTranslation = 0,
                 upperTranslation = ACTUATOR_TRANSLATION_MAX,
                 enableLimit = True,
-                maxMotorForce = 100000.0,
+                maxMotorForce = 1000.0,
                 motorSpeed = 0,
                 enableMotor = True
                 )
@@ -278,6 +281,12 @@ class MembraneJump(gym.Env):
 
     def _step(self, action):
         # Set motor speeds
+        
+        self.count = self.count + 1
+        
+#        if self.prev_state is not None:
+#            action = self.programmed_policy(self.prev_state)
+        
         for i, actuator in enumerate(self.actuator_list):
             actuator.joint.motorSpeed = float(MOTOR_SPEED * np.clip(action[i], -1, 1))
 
@@ -325,6 +334,7 @@ class MembraneJump(gym.Env):
             (actuator_vel[3])/MOTOR_SPEED,
             (actuator_vel[4])/MOTOR_SPEED,
         ]
+        self.prev_state = state
         assert len(state)==14            
 
         # Rewards
@@ -389,7 +399,31 @@ class MembraneJump(gym.Env):
                     self.viewer.draw_polyline(path, color=obj.color2, linewidth=2)
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
+    
+    def programmed_policy(self, state):
 
+        FAST_SPEED = 1;
+        HIGH_SPEED = 0.8;
+        MEDIUM_SPEED = 0.5;
+        SLOW_SPEED = 0.1;
+
+        ACTUATOR_START = BOX_SIDE_OFFSET
+        ACTUATOR_SPACING = GAP
+
+        act_pos = [(BOX_SIDE_OFFSET+GAP*i)*BOX_WIDTH for i in range(5)]
+
+        p = (self.object.position.x-BOX_SIDE_OFFSET*BOX_WIDTH)/(GAP*BOX_WIDTH)
+        action = -FAST_SPEED*np.ones(5)
+
+        if (TARGET_POS[0]-self.object.position.x) > 0:
+            #move right
+            action[int(np.ceil(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
+            action[int(np.floor(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
+        else:
+            #move left
+            action[int(np.floor(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
+            action[int(np.ceil(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
+        return action
 class MembraneWithoutLinkages(MembraneJump):
     with_linkage = False
 
