@@ -36,7 +36,7 @@ GAP = BOX_WIDTH*(1-BOX_SIDE_OFFSET/BOX_WIDTH*2)/4
 ####################
 # Motor Parameters #
 ####################
-MOTOR_SPEED = 100    # m/s
+MOTOR_SPEED = 100    # cm/s
 
 ###OTHER####
 UPPER_TRANSLATION_MIDDLE_JOINT = 10
