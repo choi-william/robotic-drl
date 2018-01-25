@@ -91,6 +91,7 @@ class MembraneJump(gym.Env):
         self.viewer = None # to be used later for rendering
 
         self.count = 0
+
         self.world = b2World(gravity=[0,GRAVITY], doSleep=True)
         self.exterior_box = None
         # Five linear actuators 
@@ -103,6 +104,7 @@ class MembraneJump(gym.Env):
             self.link_right_list = [] # four links
             
         self.prev_state = None
+
 
         # Drawlist for rendering
         self.drawlist = []
@@ -286,7 +288,7 @@ class MembraneJump(gym.Env):
         
 #        if self.prev_state is not None:
 #            action = self.programmed_policy(self.prev_state)
-        
+
         for i, actuator in enumerate(self.actuator_list):
             actuator.joint.motorSpeed = float(MOTOR_SPEED * np.clip(action[i], -1, 1))
 
@@ -335,6 +337,7 @@ class MembraneJump(gym.Env):
             (actuator_vel[4])/MOTOR_SPEED,
         ]
         self.prev_state = state
+
         assert len(state)==14            
 
         # Rewards
@@ -424,6 +427,9 @@ class MembraneJump(gym.Env):
             action[int(np.floor(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
             action[int(np.ceil(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
         return action
+class MembraneWithoutLinkages(MembraneJump):
+    with_linkage = False
+
 class MembraneWithoutLinkages(MembraneJump):
     with_linkage = False
 

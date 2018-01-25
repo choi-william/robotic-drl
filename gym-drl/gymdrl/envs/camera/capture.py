@@ -260,7 +260,8 @@ def track_objects(img, track_params, show_opening=False):
 
     img_colour_masked = cv2.bitwise_and(img, img, mask=colour_mask)
 
-    # cv2.imshow('img_colour_masked', img_colour_masked)
+    if show_opening:
+        cv2.imshow('img_colour_masked', img_colour_masked)
 
     # Use opening (combined erosion and dilation) to remove noise
     kernel = np.ones((track_params.kernel_size, track_params.kernel_size), np.uint8)
@@ -552,6 +553,7 @@ if __name__ == '__main__':
         while True:
             camera_capture = undistort(capture_frame(myCamera),
                                        np.array(camera_config.camera_matrix), np.array(camera_config.dist_coefs))
+            # cv2.imshow('plain', camera_capture)
             ouc_list = track_objects(camera_capture, ouc_params)
             ouc_top_list = track_objects(camera_capture, ouc_top_params)
             ouc_bottom_list = track_objects(camera_capture, ouc_bottom_params)
