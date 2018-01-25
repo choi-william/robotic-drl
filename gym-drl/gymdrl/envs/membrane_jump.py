@@ -8,81 +8,110 @@ import math
 from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape,
                    b2RevoluteJointDef, b2_pi)
 
-import math
+# MEMBRANE BOUNCE ENVIRONMENT
+# 
+# Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
 
-# Membrane environment for testing deep reinforcement learning algorithms.
-#
-# Failure Conditions and the Reward metric needs to be defined
+FPS = 50
+# Desired Object Position
+TARGET_POS = [15,20]
+GRAVITY = -30
 
+##########################
+# Exterior Box Dimension #
+##########################
+BOX_WIDTH = 30
+BOX_HEIGHT = 30
+BOX_HEIGHT_BELOW_ACTUATORS = 5
+EXT_BOX_POLY = [
+    (0, BOX_HEIGHT),
+    (0, -BOX_HEIGHT_BELOW_ACTUATORS),
+    (BOX_WIDTH, -BOX_HEIGHT_BELOW_ACTUATORS),
+    (BOX_WIDTH, BOX_HEIGHT)
+    ]
+
+###################
+# Body Dimensions #
+###################
+OBJ_SIZE = 0.15 # fraction of box width
+OBJ_POS_OFFSET = 0.1 # fraction of box width; should be greater than half the object size
+ACTUATOR_TIP_SIZE = 0.05 # fraction of box width
+# Distance between the wall and the center of the first actuator
+BOX_SIDE_OFFSET = 0.03 # fraction of box width
+LINK_WIDTH = 0.2 # fraction of box width
+LINK_HEIGHT = 0.04 # fraction of box width
+# Do not modify
+GAP = (1-BOX_SIDE_OFFSET*2)/4
+
+####################
+# Motor Parameters #
+####################
+MOTOR_SPEED = 25    # m/s
+MOTOR_TORQUE = 80
+
+########################
+# Rendering Parameters #
+########################
 VIEWPORT_W = 500
 VIEWPORT_H = 500
 
-FPS = 50
-
-# Exterior Box Dimension
-BOX_HEIGHT = 30
-BOX_WIDTH = 30
-EXT_BOX_POLY = [
-    (BOX_WIDTH/15, BOX_HEIGHT),
-    (BOX_WIDTH/15, 0),
-    (BOX_WIDTH-BOX_WIDTH/15, 0),
-    (BOX_WIDTH-BOX_WIDTH/15, BOX_HEIGHT)
-    ]
-
-NUM_ACTUATORS = 5
-
-# Motor Parameters
-MOTOR_SPEED = 10	# m/s
-MOTOR_TORQUE = 80
-
-GRAVITY = -30
-
-TARGET_POS = [25,5]
-
-ACTUATOR_SPACING = BOX_WIDTH/5
-ACTUATOR_START = BOX_WIDTH/10
-
-SCALE = VIEWPORT_H/BOX_HEIGHT
-
-ACTUATOR_TRANSLATION_MAX = BOX_HEIGHT/2
+ACTUATOR_TRANSLATION_MAX = BOX_HEIGHT/3
 ACTUATOR_TRANSLATION_MEAN = ACTUATOR_TRANSLATION_MAX/2
 ACTUATOR_TRANSLATION_AMP = ACTUATOR_TRANSLATION_MAX/2
 
-class MembraneJump(gym.Env):
+####################
+# Noise Parameters #
+####################
+OBJ_POS_STDDEV = BOX_WIDTH/100.0
+OBJ_VEL_STDDEV = 0 # Nothing set currently
+ACTUATOR_POS_STDDEV = BOX_WIDTH/100.0
+ACTUATOR_VEL_STDDEV = 0 # Nothing set currently
 
+
+#################################
+# Reward Calculation Parameters #
+#################################
+MAX_DIST_TO_TARGET = np.sqrt(np.square(BOX_WIDTH) + np.square(BOX_HEIGHT))
+# Maximum distance adjacent actuators can be apart veritically due to the membrane
+MAX_VERT_DIST_BETWEEN_ACTUATORS = BOX_WIDTH/4
+# Maximum steps at the target before the episode is deemed to be successfully completed
+MAX_TARGET_COUNT = 100
+
+class MembraneJump(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : FPS
     }
 
+    # Flag that indicates whether to run the env with or without linkages
+    with_linkage = True
+
     def __init__(self):
         self._seed()
         self.viewer = None # to be used later for rendering
 
-        # Gravity set to 0; assuming that the plane is flat	
         self.world = b2World(gravity=[0,GRAVITY], doSleep=True)
         self.exterior_box = None
         # Five linear actuators 
         self.actuator_list = []
-        self.actuator_joint_list = []
-        # Linkages
-        self.link_left_list = [] # four links
-        self.link_right_list = [] # four links
         # Object to be manipulated
         self.object = None 
+        # Linkages
+        if self.with_linkage:
+            self.link_left_list = [] # four links
+            self.link_right_list = [] # four links
 
-        #for rendering
+        # Drawlist for rendering
         self.drawlist = []
 
         # Observation Space 
         # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
-        high = np.array([np.inf]*12)
+        high = np.array([np.inf]*14)
         self.observation_space = spaces.Box(low=-high,high=high)
 
-        # Continuous action space; one for each linear actuator (5 toal)
+        # Continuous action space; one for each linear actuator (5 total)
         # action space represents velocity
         self.action_space = spaces.Box(-1,1,(5,))
-
         self.prev_shaping = None # for reward calculation
 
         self._reset()
@@ -90,6 +119,15 @@ class MembraneJump(gym.Env):
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    def _check_actuator_pos(self):
+        result = True
+        for i in range(4):
+            dist_diff = np.abs(self.actuator_list[i+1].position.y - self.actuator_list[i].position.y)
+            if dist_diff > MAX_VERT_DIST_BETWEEN_ACTUATORS:
+                result = False
+                break
+        return result
 
     def _destroy(self):
         if not self.exterior_box: return # return if the exterior box hasn't been created
@@ -100,70 +138,73 @@ class MembraneJump(gym.Env):
 
         for actuator in self.actuator_list:
             self.world.DestroyBody(actuator)
-        self.actuators = []
+        self.actuator_list = []
 
-        for left_link in self.link_left_list:
-            self.world.DestroyBody(left_link)
-        self.link_left_list = []
+        if self.with_linkage:
+            for left_link in self.link_left_list:
+                self.world.DestroyBody(left_link)
+            self.link_left_list = []
 
-        for right_link in self.link_right_list:
-            self.world.DestroyBody(right_link)
-        self.link_right_list = []
+            for right_link in self.link_right_list:
+                self.world.DestroyBody(right_link)
+            self.link_right_list = []
 
     def _reset(self):
         self._destroy()
-        self.game_over = False # To be used later
 
-		# Creating the Exterior Box that defines the 2D Plane
+        # Creating the Exterior Box that defines the 2D Plane
         self.exterior_box = self.world.CreateStaticBody(
             position = (0, 0),
             shapes = b2LoopShape(vertices=EXT_BOX_POLY)
             )
-
         self.exterior_box.color1 = (0,0,0)
         self.exterior_box.color2 = (0,0,0)
 
         # Creating the object to manipulate
         object_fixture = b2FixtureDef(
-            shape = b2CircleShape(radius=BOX_WIDTH/20),
-            density = 1,
-            friction = 0.6
+            shape = b2CircleShape(radius=BOX_WIDTH*OBJ_SIZE/2),
+            density = 0.3,
+            friction = 0.6,
+            restitution = 0.5
             )
-
+        # Randomizing object's initial position
+        # object_position = (
+        #     self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_WIDTH-BOX_WIDTH*OBJ_POS_OFFSET),
+        #     BOX_HEIGHT/5
+        #     )
+        # object_position = (
+        #     self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_WIDTH-BOX_WIDTH*OBJ_POS_OFFSET),
+        #     self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_HEIGHT-BOX_WIDTH*OBJ_POS_OFFSET)
+        #     )
+        object_position = (self.np_random.uniform(BOX_WIDTH*OBJ_POS_OFFSET,BOX_WIDTH-BOX_WIDTH*OBJ_POS_OFFSET), BOX_HEIGHT/3)
         self.object = self.world.CreateDynamicBody(
-            position = (5, BOX_HEIGHT/2),
-            fixtures = object_fixture
+            position = object_position,
+            fixtures = object_fixture,
+            linearDamping = 0.3 # Control this parameter for surface friction
             )
+        self.object.at_target = False
+        self.object.at_target_count = 0
         self.object.color1 = (1,1,0)
         self.object.color2 = (0,0,0)
 
         # Creating 5 actuators 
-        self.actuator_list = []
-        self.actuator_joint_list = []
-
         actuator_fixture = b2FixtureDef(
-            shape = b2CircleShape(radius=BOX_WIDTH/50.0),
+            shape = b2CircleShape(radius=BOX_WIDTH*ACTUATOR_TIP_SIZE/2),
             density = 1,
             friction = 0.6,
+            restitution = 0.0,
             groupIndex = -1
             )
 
         for i in range(5):
             actuator = self.world.CreateDynamicBody(
-                position = (ACTUATOR_SPACING*i+ACTUATOR_START, BOX_HEIGHT/10), 
+                position = ((BOX_SIDE_OFFSET+GAP*i)*BOX_WIDTH, 0), 
                 fixtures = actuator_fixture
                 )
+            actuator.color1 = (0,0,0.5)
+            actuator.color2 = (0,0,0)
 
-            actuator.color1 = (1,0,0)
-            actuator.color2 = (1,0,0)
-
-            #SHOULD STAY COMMENTED
-            # actuator = self.world.CreateKinematicBody(
-            #     position = (BOX_WIDTH/5*i+BOX_WIDTH/10, BOX_HEIGHT/10), 
-            #     shapes = b2CircleShape(radius=BOX_WIDTH/50.0), # diameter is 1/5th of the space allocated for each actuator
-            #     )
-
-            actuator_joint = self.world.CreatePrismaticJoint(
+            actuator.joint = self.world.CreatePrismaticJoint(
                 bodyA = self.exterior_box,
                 bodyB = actuator,
                 anchor = actuator.position,
@@ -177,128 +218,134 @@ class MembraneJump(gym.Env):
                 )
             
             self.actuator_list.append(actuator)
-            self.actuator_joint_list.append(actuator_joint)
 
-        # Creating the linkages that will form the semi-flexible membrane
-        self.link_left_list = [] # four links
-        self.link_right_list = [] # four links
+        self.drawlist = self.actuator_list + [self.object]
 
-        link_fixture = b2FixtureDef(
-            shape=b2PolygonShape(box=(BOX_WIDTH/12, BOX_WIDTH/70.0)),
-            density=1, 
-            friction = 0.6,
-            groupIndex = -1 # neg index to prevent collision
-            )
-
-        for i in range(1,5):
-            link_left = self.world.CreateDynamicBody(
-                position = (BOX_WIDTH/5*i-BOX_WIDTH/10+BOX_WIDTH/12,BOX_HEIGHT/10),
-                fixtures = link_fixture
-                )
-            link_left.color1 = (0,1,1)
-            link_left.color2 = (1,0,1)
-            self.link_left_list.append(link_left)
-
-            link_right = self.world.CreateDynamicBody(
-                position = (BOX_WIDTH/5*i+BOX_WIDTH/10-BOX_WIDTH/12,BOX_HEIGHT/10),
-                fixtures = link_fixture
-                )
-            link_right.color1 = (0,1,1)
-            link_right.color2 = (1,0,1)
-            self.link_right_list.append(link_right)
-            
-            joint_left = self.world.CreateRevoluteJoint(
-                bodyA = self.actuator_list[i-1],
-                bodyB = link_left,
-                anchor = self.actuator_list[i-1].worldCenter,
-                collideConnected=False
+        if self.with_linkage:
+            # Creating the linkages that will form the semi-flexible membrane
+            link_fixture = b2FixtureDef(
+                shape=b2PolygonShape(box=(LINK_WIDTH*BOX_WIDTH/2, LINK_HEIGHT*BOX_WIDTH/2)),
+                density=1, 
+                friction = 0.6,
+                restitution = 0.0,
+                groupIndex = -1 # neg index to prevent collision
                 )
 
-            joint_right = self.world.CreateRevoluteJoint(
-                bodyA = self.actuator_list[i],
-                bodyB = link_right,
-                anchor = self.actuator_list[i].worldCenter,
-                collideConnected=False
-                )
+            for i in range(4):
+                link_left = self.world.CreateDynamicBody(
+                    position = (BOX_WIDTH*(BOX_SIDE_OFFSET+GAP*i+LINK_WIDTH/2),0),
+                    fixtures = link_fixture
+                    )
+                link_left.color1 = (0,1,1)
+                link_left.color2 = (1,0,1)
+                self.link_left_list.append(link_left)
 
-            joint_middle = self.world.CreatePrismaticJoint(
-                bodyA = link_left,
-                bodyB = link_right,
-                anchor = (link_right.position.x-BOX_WIDTH/12+BOX_WIDTH/70, link_right.position.y),
-                axis = (1,0),
-                lowerTranslation = 0,
-                upperTranslation = BOX_WIDTH/6-BOX_WIDTH/35,
-                enableLimit = True
-                )
+                link_right = self.world.CreateDynamicBody(
+                    position = (BOX_WIDTH*(BOX_SIDE_OFFSET+GAP*(i+1)-LINK_WIDTH/2),0),
+                    fixtures = link_fixture
+                    )
+                link_right.color1 = (0,1,1)
+                link_right.color2 = (1,0,1)
+                self.link_right_list.append(link_right)
+                
+                joint_left = self.world.CreateRevoluteJoint(
+                    bodyA = self.actuator_list[i],
+                    bodyB = link_left,
+                    anchor = self.actuator_list[i].worldCenter,
+                    collideConnected=False
+                    )
 
-        self.drawlist = self.link_right_list + self.link_left_list + [self.object] 
-        self.drawlist = self.drawlist + self.actuator_list
+                joint_right = self.world.CreateRevoluteJoint(
+                    bodyA = self.actuator_list[i+1],
+                    bodyB = link_right,
+                    anchor = self.actuator_list[i+1].worldCenter,
+                    collideConnected=False
+                    )
+
+                joint_middle = self.world.CreatePrismaticJoint(
+                    bodyA = link_left,
+                    bodyB = link_right,
+                    anchor = (link_right.position.x-BOX_WIDTH*(LINK_WIDTH/2+LINK_HEIGHT/2), link_right.position.y),
+                    axis = (1,0),
+                    lowerTranslation = 0,
+                    upperTranslation = BOX_WIDTH*LINK_WIDTH*2/3,
+                    enableLimit = True
+                    )
+            # Adding linkages to the drawlist
+            self.drawlist = self.link_left_list + self.link_right_list + self.drawlist
+
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
     def _step(self, action):
         # Set motor speeds
-
-        for i, actuator_joint in enumerate(self.actuator_joint_list):
-            actuator_joint.motorSpeed = float(MOTOR_SPEED * np.clip(action[i], -1, 1))
+        for i, actuator in enumerate(self.actuator_list):
+            actuator.joint.motorSpeed = float(MOTOR_SPEED * np.clip(action[i], -1, 1))
 
         # Move forward one frame
         self.world.Step(1.0/FPS, 6*30, 2*30)
 
+        # Required values to be acquired from the platform
+        object_pos = [
+            np.random.normal(self.object.position.x, OBJ_POS_STDDEV),
+            np.random.normal(self.object.position.y, OBJ_POS_STDDEV)
+            ]
+        object_vel = [
+            self.object.linearVelocity.x,
+            self.object.linearVelocity.y
+            ]
+        actuator_pos = [
+            np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV),
+            np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV),
+            np.random.normal(self.actuator_list[2].position.y, ACTUATOR_POS_STDDEV),
+            np.random.normal(self.actuator_list[3].position.y, ACTUATOR_POS_STDDEV),
+            np.random.normal(self.actuator_list[4].position.y, ACTUATOR_POS_STDDEV)
+            ]
+        actuator_vel = [
+            self.actuator_list[0].linearVelocity.y,
+            self.actuator_list[1].linearVelocity.y,
+            self.actuator_list[2].linearVelocity.y,
+            self.actuator_list[3].linearVelocity.y,
+            self.actuator_list[4].linearVelocity.y
+            ]
+
         # Observation space (state)
         state = [
-            (self.object.position.x-BOX_WIDTH/2)/(BOX_WIDTH/2),
-            (self.object.position.y-BOX_HEIGHT/2)/(BOX_HEIGHT/2),
-            (self.actuator_list[0].position.y-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (self.actuator_list[1].position.y-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (self.actuator_list[2].position.y-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (self.actuator_list[3].position.y-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (self.actuator_list[4].position.y-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (self.actuator_list[0].linearVelocity.y)/MOTOR_SPEED,
-            (self.actuator_list[1].linearVelocity.y)/MOTOR_SPEED,
-            (self.actuator_list[2].linearVelocity.y)/MOTOR_SPEED,
-            (self.actuator_list[3].linearVelocity.y)/MOTOR_SPEED,
-            (self.actuator_list[4].linearVelocity.y)/MOTOR_SPEED,
+            (object_pos[0]-BOX_WIDTH/2)/(BOX_WIDTH/2),
+            (object_pos[1]-BOX_HEIGHT/2)/(BOX_HEIGHT/2),
+            object_vel[0]/((BOX_WIDTH/16)*FPS),
+            object_vel[1]/((BOX_HEIGHT/16)*FPS),
+            (actuator_pos[0]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[1]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[2]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[3]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[4]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
+            (actuator_vel[0])/MOTOR_SPEED,
+            (actuator_vel[1])/MOTOR_SPEED,
+            (actuator_vel[2])/MOTOR_SPEED,
+            (actuator_vel[3])/MOTOR_SPEED,
+            (actuator_vel[4])/MOTOR_SPEED,
         ]
-        assert len(state)==12            
+        assert len(state)==14            
 
-        # act_pos = [self.actuator_list[i].position.y for i in range(5)]
+        # Rewards
+        reward = 0
+        shaping = -200*np.abs(TARGET_POS[1]-object_pos[1])/BOX_HEIGHT - 200*np.abs(TARGET_POS[0]-object_pos[0])/BOX_WIDTH - 10*np.abs(state[2]) + 300*(object_pos[1] - max(actuator_pos))/TARGET_POS[1]
 
-        # p = (self.object.position.x-ACTUATOR_START)/ACTUATOR_SPACING
-        # act_slope = (act_pos[math.ceil(p)]-act_pos[math.floor(p)])/ACTUATOR_SPACING
-
-        # y_under = act_slope*(self.object.position.x-(math.floor(p)*ACTUATOR_SPACING+ACTUATOR_START))+act_pos[math.floor(p)]
-        # dist = self.object.position.y - y_under - 2
-
-
-        temp = 10 * self.object.linearVelocity.y**2
-        shaping = (math.fabs(self.actuator_list[0].linearVelocity.y) +
-                  math.fabs(self.actuator_list[1].linearVelocity.y) +
-                  math.fabs(self.actuator_list[2].linearVelocity.y) +
-                  math.fabs(self.actuator_list[3].linearVelocity.y) +
-                  math.fabs(self.actuator_list[4].linearVelocity.y)) / 5
-
-        reward = temp
-
-        if (temp > 1):
+        if (object_pos[1] - max(actuator_pos)) > 4:
             shaping += 20
-
+        
         if self.prev_shaping is not None:
-            reward += shaping - self.prev_shaping
+            reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
 
-        # if (dist) > 0:
-        #     #got some bounce action going on
-        #     reward = 10*(dist**2)
-        # else:
-        #     reward = 10*(dist)
-
-        reward = reward - 100
-
+        # Reduce reward for using the motor
         for a in action:
-            reward -= 5 * np.clip(np.abs(a), 0, 1)
+            reward -= 0.05*np.clip(np.abs(a), 0, 1)
 
+        if np.abs(TARGET_POS[1]-object_pos[1]) < 1 and object_vel[1] < 0.05:
+            reward += 100
         done = False
-
+        
         return np.array(state), reward, done, {}
 
     def _render(self, mode='human', close=False):
@@ -312,9 +359,21 @@ class MembraneJump(gym.Env):
 
         if self.viewer is None:
             self.viewer = rendering.Viewer(VIEWPORT_W, VIEWPORT_H)
-            self.viewer.set_bounds(0, VIEWPORT_W/SCALE, 0, VIEWPORT_H/SCALE)
+            self.viewer.set_bounds(-5, BOX_WIDTH+5, -5-BOX_HEIGHT_BELOW_ACTUATORS, BOX_HEIGHT+5)
 
+        # Actuator start position visualized
+        self.viewer.draw_polyline( [(0, 0), (BOX_WIDTH, 0)], color=(1,0,1) )
+
+        # Target Position Visualized
         self.viewer.draw_polyline( [(TARGET_POS[0], 0), (TARGET_POS[0], BOX_HEIGHT)], color=(1,0,0) )
+        self.viewer.draw_polyline( [(0, TARGET_POS[1]), (BOX_WIDTH, TARGET_POS[1])], color=(1,0,0) )
+
+        # Exterior Box Visualized
+        box_fixture = self.exterior_box.fixtures[0]
+        box_trans = box_fixture.body.transform
+        box_path = [box_trans*v for v in box_fixture.shape.vertices]
+        box_path.append(box_path[0])
+        self.viewer.draw_polyline(box_path, color=self.exterior_box.color2, linewidth=2)
 
         for obj in self.drawlist:
             for f in obj.fixtures:
@@ -331,7 +390,9 @@ class MembraneJump(gym.Env):
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
-if __name__=="__main__":
-    env = Membrane()
-    s = env.reset()
+class MembraneWithoutLinkages(MembraneJump):
+    with_linkage = False
 
+if __name__=="__main__":
+    env = MembraneJump()
+    s = env.reset()
