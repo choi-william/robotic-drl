@@ -34,11 +34,12 @@ cd gym-drl
 pip install -e .
 ```
 
-# Example Code
-```
-import gym
-import gymdrl
-env = gym.make('')
-env.reset()
-env.render()
-```
+# Environments
+
+Basketball
+Bouncing
+Moving to target
+Ordering
+Stacking
+Rotating
+
