@@ -8,7 +8,7 @@ import math
 from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape,
                    b2RevoluteJointDef, b2_pi)
 
-# MEMBRANE BOUNCE ENVIRONMENT
+# MEMBRANE BASKET ENVIRONMENT
 # 
 # Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
 
