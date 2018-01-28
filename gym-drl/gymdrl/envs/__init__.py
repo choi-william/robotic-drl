@@ -9,3 +9,4 @@ from gymdrl.envs.membrane_order import MembraneOrder
 from gymdrl.envs.membrane_rotate import MembraneRotate
 from gymdrl.envs.membrane_stack import MembraneStack
 from gymdrl.envs.membrane_target import MembraneTarget
+from gymdrl.envs.membrane_move_arb import MembraneMoveArb

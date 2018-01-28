@@ -59,3 +59,10 @@ register(
     max_episode_steps=300,
     reward_threshold=300,
 )
+
+register(
+    id='MembraneMoveArb-v0',
+    entry_point='gymdrl.envs:MembraneMoveArb',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
