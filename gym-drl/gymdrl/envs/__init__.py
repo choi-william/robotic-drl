@@ -7,3 +7,4 @@ from gymdrl.envs.hardware_membrane import MembraneHardware
 from gymdrl.envs.membrane_basket import MembraneBasket
 from gymdrl.envs.membrane_calibration import MembraneCalibration
 from gymdrl.envs.hardware_simulation import HardwareSimulation
+from gymdrl.envs.membrane_move_arb import MembraneMoveArb

@@ -33,7 +33,7 @@ class ActorNetwork(object):
             self.inputs, self.out, self.scaled_out = self.create_actor_network()
 
     def create_actor_network(self):
-        arch = 'architecture_actor_v1'
+        arch = 'architecture_actor_v0'
         get_net_method = getattr(architectures, arch)
         inputs, out, scaled_out = get_net_method(self.s_dim, self.a_dim, self.action_amp, self.action_mid)
         return inputs, out, scaled_out
