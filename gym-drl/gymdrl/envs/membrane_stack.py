@@ -116,7 +116,7 @@ class MembraneStack(gym.Env):
     def _step(self, action):
         # Set motor speeds
         for i, actuator in enumerate(self.actuator_list):
-            actuator.joint.motorSpeed = float(MOTOR_SPEED * np.clip(action[i], -1, 1))
+            actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
 
         # Move forward one frame
         self.world.Step(1.0/FPS, 6*30, 2*30)
@@ -155,24 +155,24 @@ class MembraneStack(gym.Env):
 
         # Observation space (state)
         state = [
-            (object1_pos[0]-BOX_WIDTH/2)/(BOX_WIDTH/2),
-            (object1_pos[1]-BOX_HEIGHT/2)/(BOX_HEIGHT/2),
-            (object2_pos[0]-BOX_WIDTH/2)/(BOX_WIDTH/2),
-            (object2_pos[1]-BOX_HEIGHT/2)/(BOX_HEIGHT/2),
-            object1_vel[0]/((BOX_WIDTH/16)*FPS),
-            object1_vel[1]/((BOX_HEIGHT/16)*FPS),
-            object2_vel[0]/((BOX_WIDTH/16)*FPS),
-            object2_vel[1]/((BOX_WIDTH/16)*FPS),
-            (actuator_pos[0]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[1]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[2]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[3]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[4]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_vel[0])/MOTOR_SPEED,
-            (actuator_vel[1])/MOTOR_SPEED,
-            (actuator_vel[2])/MOTOR_SPEED,
-            (actuator_vel[3])/MOTOR_SPEED,
-            (actuator_vel[4])/MOTOR_SPEED,
+            (object1_pos[0]-membrane_base.BOX_WIDTH/2)/(membrane_base.BOX_WIDTH/2),
+            (object1_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
+            (object2_pos[0]-membrane_base.BOX_WIDTH/2)/(membrane_base.BOX_WIDTH/2),
+            (object2_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
+            object1_vel[0]/((membrane_base.BOX_WIDTH/16)*FPS),
+            object1_vel[1]/((membrane_base.BOX_HEIGHT/16)*FPS),
+            object2_vel[0]/((membrane_base.BOX_WIDTH/16)*FPS),
+            object2_vel[1]/((membrane_base.BOX_WIDTH/16)*FPS),
+            (actuator_pos[0]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[1]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[2]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[3]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[4]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_vel[0])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[1])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[2])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[3])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
         assert len(state)==18            
 
@@ -181,9 +181,9 @@ class MembraneStack(gym.Env):
 
         # distance between the objects
         obj_dist_x = object2_pos[0] - object1_pos[0]
-        obj_dist_y = object2_pos[1] - object1_pos[1] - BOX_WIDTH*OBJ_SIZE
+        obj_dist_y = object2_pos[1] - object1_pos[1] - OBJ_SIZE
 
-        shaping = -200*np.abs(obj_dist_y)/BOX_HEIGHT -150*np.abs(obj_dist_x)/BOX_WIDTH
+        shaping = -200*np.abs(obj_dist_y)/membrane_base.BOX_HEIGHT -150*np.abs(obj_dist_x)/membrane_base.BOX_WIDTH
         
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping

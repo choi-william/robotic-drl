@@ -3,6 +3,8 @@ from gym import spaces
 from gym.utils import seeding
 from gym.envs.classic_control import rendering
 
+from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape)
+
 import numpy as np
 import math
 
@@ -16,11 +18,11 @@ import membrane_base
 #   - rotates a square object by a specified angle: 90, 180, 270, 360, etc
 # 
 # Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
-s 
+
 FPS = 50
 # Set the rotation angle for the task here
 ROTATION_ANGLE = np.pi
-#
+# Set the object size for the square here
 OBJ_SIZE = membrane_base.BOX_WIDTH*0.2
 
 ########################
@@ -137,21 +139,21 @@ class MembraneRotate(gym.Env):
 
         # Observation space (state)
         state = [
-            (object_pos[0]-BOX_WIDTH/2)/(BOX_WIDTH/2),
-            (object_pos[1]-BOX_HEIGHT/2)/(BOX_HEIGHT/2),
-            object_vel[0]/((BOX_WIDTH/16)*FPS),
-            object_vel[1]/((BOX_HEIGHT/16)*FPS),
+            (object_pos[0]-membrane_base.BOX_WIDTH/2)/(membrane_base.BOX_WIDTH/2),
+            (object_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
+            object_vel[0]/((membrane_base.BOX_WIDTH/16)*FPS),
+            object_vel[1]/((membrane_base.BOX_HEIGHT/16)*FPS),
             object_angle/180.0,
-            (actuator_pos[0]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[1]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[2]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[3]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_pos[4]-ACTUATOR_TRANSLATION_MEAN)/ACTUATOR_TRANSLATION_AMP,
-            (actuator_vel[0])/MOTOR_SPEED,
-            (actuator_vel[1])/MOTOR_SPEED,
-            (actuator_vel[2])/MOTOR_SPEED,
-            (actuator_vel[3])/MOTOR_SPEED,
-            (actuator_vel[4])/MOTOR_SPEED,
+            (actuator_pos[0]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[1]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[2]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[3]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_pos[4]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
+            (actuator_vel[0])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[1])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[2])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[3])/membrane_base.MOTOR_SPEED,
+            (actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
         assert len(state)==15            
 

@@ -14,6 +14,7 @@ import membrane_base
 
 # MEMBRANE TARGET ENVIRONMENT
 #   - moves object to a specified (x,y) position on the platform
+#   - target position changes with each episode
 # 
 # Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
 
