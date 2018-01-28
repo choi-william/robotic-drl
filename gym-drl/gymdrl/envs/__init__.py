@@ -1,10 +1,12 @@
-from gymdrl.envs.lunar_lander import LunarLanderContinuous
-from gymdrl.envs.membrane_jump import MembraneJump
-from gymdrl.envs.membrane_v1 import Membrane
-from gymdrl.envs.membrane_v1 import MembraneWithoutLinkages
-from gymdrl.envs.double_joint import DoubleJoint
+# Hardware Membrane
 from gymdrl.envs.hardware_membrane import MembraneHardware
+
+# Simulations
 from gymdrl.envs.membrane_basket import MembraneBasket
 from gymdrl.envs.membrane_calibration import MembraneCalibration
-from gymdrl.envs.hardware_simulation import HardwareSimulation
+from gymdrl.envs.membrane_jump import MembraneJump
+from gymdrl.envs.membrane_order import MembraneOrder
+from gymdrl.envs.membrane_rotate import MembraneRotate
+from gymdrl.envs.membrane_stack import MembraneStack
+from gymdrl.envs.membrane_target import MembraneTarget
 from gymdrl.envs.membrane_move_arb import MembraneMoveArb

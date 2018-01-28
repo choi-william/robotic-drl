@@ -1,23 +1,19 @@
 import gym
 from gym import spaces
 from gym.utils import seeding
+from gym.envs.classic_control import rendering
 
 import numpy as np
 import math
 
-#the following is to give import access for membrane_base
-
+# The following is to give import access for membrane_base
 import gymdrl
 import sys
 sys.path.append(gymdrl.__file__[:-11] + 'envs') #hacky but necessary
-
 import membrane_base
 
-from gym.envs.classic_control import rendering
-
-
-
-# MEMBRANE BOUNCE ENVIRONMENT
+# MEMBRANE TARGET ENVIRONMENT
+#   - moves object to a specified (x,y) position on the platform
 # 
 # Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
 
@@ -31,44 +27,28 @@ OBJ_VEL_STDDEV = 0 # Nothing set currently
 ACTUATOR_POS_STDDEV = membrane_base.BOX_WIDTH/100.0
 ACTUATOR_VEL_STDDEV = 0 # Nothing set currently
 
-#################################
-# Reward Calculation Parameters #
-#################################
-# Desired Object Position
-
-MAX_DIST_TO_TARGET = np.sqrt(np.square(membrane_base.BOX_WIDTH) + np.square(membrane_base.BOX_HEIGHT))
-# Maximum distance adjacent actuators can be apart veritically due to the membrane
-MAX_VERT_DIST_BETWEEN_ACTUATORS = membrane_base.BOX_WIDTH/4
-# Maximum steps at the target before the episode is deemed to be successfully completed
-MAX_TARGET_COUNT = 100
-
-
 ########################
 # Rendering Parameters #
 ########################
 TEMPW = membrane_base.BOX_WIDTH
 TEMPH = membrane_base.BOX_HEIGHT_BELOW_ACTUATORS + membrane_base.BOX_HEIGHT
-
 VIEWPORT_W = int(1000*TEMPW / (TEMPW + TEMPH))
 VIEWPORT_H = int(1000*TEMPH / (TEMPW + TEMPH))
 
-class HardwareSimulation(gym.Env):
+class MembraneTarget(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : FPS
     }
 
-    # Flag that indicates whether to run the env with or without linkages
-    with_linkage = True
-
     def __init__(self):
         self._seed()
         self.viewer = None # to be used later for rendering
         self.target_pos = None
+        # Object to be manipulated
+        self.object = None 
+        # Initializing other common components in the environment
         membrane_base.init_helper(self)
-
-        # Drawlist for rendering
-        self.drawlist = []
         
         self.prev_state = None
 
@@ -88,30 +68,50 @@ class HardwareSimulation(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def _check_actuator_pos(self):
-        result = True
-        for i in range(4):
-            dist_diff = np.abs(self.actuator_list[i+1].position.y - self.actuator_list[i].position.y)
-            if dist_diff > MAX_VERT_DIST_BETWEEN_ACTUATORS:
-                result = False
-                break
-        return result
-
     def _destroy(self):
         if not self.exterior_box: return # return if the exterior box hasn't been created
         membrane_base.destroy_helper(self)
+        self.world.DestroyBody(self.object)
+        self.object = None
 
     def _reset(self):
         self._destroy()
-
         membrane_base.reset_helper(self)
 
         self.target_pos = [np.random.rand()*(membrane_base.BOX_WIDTH-membrane_base.OBJ_SIZE)+membrane_base.OBJ_SIZE/2,5]
         
+        # Creating the object to manipulate
+        object_fixture = b2FixtureDef(
+            shape = b2CircleShape(radius=membrane_base.OBJ_SIZE/2),
+            density = 0.01,
+            friction = 0.05,
+            restitution = 0.2
+            )
+        # Randomizing object's initial position
+        # object_position = (
+        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
+        #     membrane_base.BOX_HEIGHT/5
+        #     )
+        # object_position = (
+        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
+        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
+        #     )
+        object_position = (membrane_base.BOX_WIDTH/2, 3)
+        self.object = self.world.CreateDynamicBody(
+            position = object_position,
+            fixtures = object_fixture,
+            linearDamping = 0.3 # Control this parameter for surface friction
+            )
+        self.object.color1 = (1,1,0)
+        self.object.color2 = (0,0,0)
+
+        self.drawlist = self.drawlist + [self.object]
+
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
     def _step(self, action):
         
+        # Uncomment the following two lines to use the programmed policy        
 #        if self.prev_state is not None:
 #            action = self.programmed_policy(self.prev_state)
 
@@ -212,7 +212,6 @@ class HardwareSimulation(gym.Env):
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
-
     def programmed_policy(self,state):
 
         FAST_SPEED = 1;
@@ -244,5 +243,5 @@ class HardwareSimulation(gym.Env):
         return action
 
 if __name__=="__main__":
-    env = Membrane()
+    env = MembraneTarget()
     s = env.reset()
