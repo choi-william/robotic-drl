@@ -52,9 +52,8 @@ def init_helper(env_obj):
     # Five linear actuators 
     env_obj.actuator_list = []
     # Linkages
-    if env_obj.with_linkage:
-        env_obj.link_left_list = [] # four links
-        env_obj.link_right_list = [] # four links
+    env_obj.link_left_list = [] # four links
+    env_obj.link_right_list = [] # four links
     # Drawlist for rendering
     env_obj.drawlist = []
 
@@ -72,7 +71,7 @@ def reset_helper(env_obj):
     actuator_fixture = b2FixtureDef(
         shape = b2CircleShape(radius=ACTUATOR_TIP_SIZE/2),
         density = 1,
-        friction = 0.7,
+        friction = 0.6,
         restitution = 0.0,
         groupIndex = -1
         )
@@ -102,59 +101,57 @@ def reset_helper(env_obj):
 
     env_obj.drawlist = env_obj.actuator_list
 
+    # Creating the linkages that will form the semi-flexible membrane
+    link_fixture = b2FixtureDef(
+        shape=b2PolygonShape(box=(LINK_WIDTH/2, LINK_HEIGHT/2)),
+        density=1, 
+        friction = 0.6,
+        restitution = 0.0,
+        groupIndex = -1 # neg index to prevent collision
+        )
 
-    if env_obj.with_linkage:
-        # Creating the linkages that will form the semi-flexible membrane
-        link_fixture = b2FixtureDef(
-            shape=b2PolygonShape(box=(LINK_WIDTH/2, LINK_HEIGHT/2)),
-            density=1, 
-            friction = 0.0,
-            restitution = 0.0,
-            groupIndex = -1 # neg index to prevent collision
+    for i in range(4):
+        link_left = env_obj.world.CreateDynamicBody(
+            position = (BOX_SIDE_OFFSET+(GAP*i+LINK_WIDTH/2),0),
+            fixtures = link_fixture
+            )
+        link_left.color1 = (0,1,1)
+        link_left.color2 = (1,0,1)
+        env_obj.link_left_list.append(link_left)
+
+        link_right = env_obj.world.CreateDynamicBody(
+            position = (BOX_SIDE_OFFSET+(GAP*(i+1)-LINK_WIDTH/2),0),
+            fixtures = link_fixture
+            )
+        link_right.color1 = (0,1,1)
+        link_right.color2 = (1,0,1)
+        env_obj.link_right_list.append(link_right)
+        
+        joint_left = env_obj.world.CreateRevoluteJoint(
+            bodyA = env_obj.actuator_list[i],
+            bodyB = link_left,
+            anchor = env_obj.actuator_list[i].worldCenter,
+            collideConnected=False
             )
 
-        for i in range(4):
-            link_left = env_obj.world.CreateDynamicBody(
-                position = (BOX_SIDE_OFFSET+(GAP*i+LINK_WIDTH/2),0),
-                fixtures = link_fixture
-                )
-            link_left.color1 = (0,1,1)
-            link_left.color2 = (1,0,1)
-            env_obj.link_left_list.append(link_left)
+        joint_right = env_obj.world.CreateRevoluteJoint(
+            bodyA = env_obj.actuator_list[i+1],
+            bodyB = link_right,
+            anchor = env_obj.actuator_list[i+1].worldCenter,
+            collideConnected=False
+            )
 
-            link_right = env_obj.world.CreateDynamicBody(
-                position = (BOX_SIDE_OFFSET+(GAP*(i+1)-LINK_WIDTH/2),0),
-                fixtures = link_fixture
-                )
-            link_right.color1 = (0,1,1)
-            link_right.color2 = (1,0,1)
-            env_obj.link_right_list.append(link_right)
-            
-            joint_left = env_obj.world.CreateRevoluteJoint(
-                bodyA = env_obj.actuator_list[i],
-                bodyB = link_left,
-                anchor = env_obj.actuator_list[i].worldCenter,
-                collideConnected=False
-                )
-
-            joint_right = env_obj.world.CreateRevoluteJoint(
-                bodyA = env_obj.actuator_list[i+1],
-                bodyB = link_right,
-                anchor = env_obj.actuator_list[i+1].worldCenter,
-                collideConnected=False
-                )
-
-            joint_middle = env_obj.world.CreatePrismaticJoint(
-                bodyA = link_left,
-                bodyB = link_right,
-                anchor = (link_right.position.x-(LINK_WIDTH/2+LINK_HEIGHT/2), link_right.position.y),
-                axis = (1,0),
-                lowerTranslation = 0,
-                upperTranslation = UPPER_TRANSLATION_MIDDLE_JOINT,
-                enableLimit = True
-                )
-        # Adding linkages to the drawlist
-        env_obj.drawlist = env_obj.link_left_list + env_obj.link_right_list + env_obj.drawlist
+        joint_middle = env_obj.world.CreatePrismaticJoint(
+            bodyA = link_left,
+            bodyB = link_right,
+            anchor = (link_right.position.x-(LINK_WIDTH/2+LINK_HEIGHT/2), link_right.position.y),
+            axis = (1,0),
+            lowerTranslation = 0,
+            upperTranslation = UPPER_TRANSLATION_MIDDLE_JOINT,
+            enableLimit = True
+            )
+    # Adding linkages to the drawlist
+    env_obj.drawlist = env_obj.link_left_list + env_obj.link_right_list + env_obj.drawlist
 
 
 def destroy_helper(env_obj):
@@ -165,14 +162,13 @@ def destroy_helper(env_obj):
         env_obj.world.DestroyBody(actuator)
     env_obj.actuator_list = []
 
-    if env_obj.with_linkage:
-        for left_link in env_obj.link_left_list:
-            env_obj.world.DestroyBody(left_link)
-        env_obj.link_left_list = []
+    for left_link in env_obj.link_left_list:
+        env_obj.world.DestroyBody(left_link)
+    env_obj.link_left_list = []
 
-        for right_link in env_obj.link_right_list:
-            env_obj.world.DestroyBody(right_link)
-        env_obj.link_right_list = []
+    for right_link in env_obj.link_right_list:
+        env_obj.world.DestroyBody(right_link)
+    env_obj.link_right_list = []
 
 def render_helper(env_obj):
     # Actuator start position visualized

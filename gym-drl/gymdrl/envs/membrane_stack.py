@@ -97,14 +97,14 @@ class MembraneStack(gym.Env):
         self.object1 = self.world.CreateDynamicBody(
             position = object1_position,
             fixtures = object_fixture,
-            linearDamping = 0.5 # Control this parameter for surface friction
+            linearDamping = 0.8 # Control this parameter for surface friction
             )
         self.object1.color1 = (1,1,0)
         self.object1.color2 = (0,0,0)
         self.object2 = self.world.CreateDynamicBody(
             position = object2_position,
             fixtures = object_fixture,
-            linearDamping = 0.5 # Control this parameter for surface friction
+            linearDamping = 0.8 # Control this parameter for surface friction
             )
         self.object2.color1 = (0,1,0)
         self.object2.color2 = (0,0,0)

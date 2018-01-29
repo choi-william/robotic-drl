@@ -106,7 +106,7 @@ class MembraneRotate(gym.Env):
     def _step(self, action):
         # Set motor speeds
         for i, actuator in enumerate(self.actuator_list):
-            actuator.joint.motorSpeed = float(MOTOR_SPEED * np.clip(action[i], -1, 1))
+            actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
 
         # Move forward one frame
         self.world.Step(1.0/FPS, 6*30, 2*30)

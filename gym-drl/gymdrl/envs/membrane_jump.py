@@ -151,7 +151,7 @@ class MembraneJump(gym.Env):
             (actuator_pos[4]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
             (actuator_vel[0])/membrane_base.MOTOR_SPEED,
             (actuator_vel[1])/membrane_base.MOTOR_SPEED,
-            (actuator_vel[2])/membrane_base.membrane_base.MOTOR_SPEED,
+            (actuator_vel[2])/membrane_base.MOTOR_SPEED,
             (actuator_vel[3])/membrane_base.MOTOR_SPEED,
             (actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]

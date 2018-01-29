@@ -3,6 +3,8 @@ from gym import spaces
 from gym.utils import seeding
 from gym.envs.classic_control import rendering
 
+from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape)
+
 import numpy as np
 import math
 

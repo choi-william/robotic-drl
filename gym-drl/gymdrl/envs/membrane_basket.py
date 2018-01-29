@@ -92,13 +92,13 @@ class MembraneBasket(gym.Env):
         # Creating the baskets
         self.basketL = self.world.CreateStaticBody(
             position = (TARGET_POS[0]-BASKET_WIDTH/2, TARGET_POS[1]),
-            shapes = b2CircleShape(radius=BOX_WIDTH*ACTUATOR_TIP_SIZE/4)
+            shapes = b2CircleShape(radius=membrane_base.ACTUATOR_TIP_SIZE/4)
             )
         self.basketL.color1 = (0,0,0)
         self.basketL.color2 = (0,0,0)
         self.basketR = self.world.CreateStaticBody(
             position = (TARGET_POS[0]+BASKET_WIDTH/2, TARGET_POS[1]),
-            shapes = b2CircleShape(radius=BOX_WIDTH*ACTUATOR_TIP_SIZE/4)
+            shapes = b2CircleShape(radius=membrane_base.ACTUATOR_TIP_SIZE/4)
             )
         self.basketR.color1 = (0,0,0)
         self.basketR.color2 = (0,0,0)       
