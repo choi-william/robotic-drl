@@ -17,20 +17,20 @@ Mac: `brew install python3`
 Following python packages need to be installed: _tensorflow, tflearn, openai-gym, pyBox2D, pyGame_.  
 As mentioned above these are only the packages required for the simulated environments.  
 
-#### Tensorflow ####
+##### Tensorflow #####
 Tensorflow is our machine learning library that will handle all the hard ML stuff: https://www.tensorflow.org/install/  
 I recommend installing through native-pip. Make sure that all installation is with python3 (eg. use pip3 instead of pip always)  
 ```pip3 install tensorflow```
 
-#### Tflearn ####
+##### Tflearn #####
 TFLearn is a wrapper on top of tensorflow that simplifies it even more.  
 ```pip3 install tflearn```
 
-#### Openai-gym ####
+##### Openai-gym #####
 OpenAI gym is our reinforcement learning environment testing framework.  
 ```pip3 install gym```
 
-#### PyBox2D ####
+##### PyBox2D #####
 pyBox2D requires a set of packages to be pre-installed.  
 ```brew install cmake boost boost-python sdl2 swig wget```
 
@@ -43,11 +43,11 @@ python3 setup.py build
 python3 setup.py install
 ```
 
-#### PyGame ####
+##### PyGame #####
 PyGame is required to render the examples provided through pyBox2D. This can also be installed using pip.  
 ```pip3 install pygame```
 
-#### Finally installing gym-drl ####
+##### Finally installing gym-drl #####
 To install gym-drl, clone the repository and then subsequently install it using pip
 ```
 cd gym-drl
@@ -58,7 +58,7 @@ pip install -e .
 
 There are several environments you can choose to train on. More details regarding the environments are provided below in the _Environments_ section.  
 
-#### Training ####
+##### Training #####
 To start training you have to execute _train.py_ located within the _algorithm_ folder as shown below:  
 ```python3 train.py --env <environment name> --render-env --output-name <output folder name>```  
 
@@ -75,7 +75,7 @@ To visualize the data stored in the _tf_ddpg_ folder run the following command:
 ```tensorboard --logdir results/tf_ddpg/<output folder name>/. ```  
 This outputs useful plots in realtime. We recommend running this in a separate terminal window.  
 
-#### Executing ####
+##### Executing #####
 To start executing the model that you've trained, you have to execute _execute.py_ located wihtin the _algorithm_ folder as shown below:  
 ```python3 execute.py --env <environment name> --render-env --model-name <model folder name>```
 
@@ -83,27 +83,27 @@ The "model folder name" is the output folder name specified during the training 
 
 ### Environments ###
 
-#### Basketball ####
+##### Basketball #####
 Shoots the ball through the hoop.  
 ```python3 train.py --env MembraneBasket-v0 --render-env --output-name <output folder name>```
 
-#### Bouncing ####
+##### Bouncing #####
 Bounces the ball at the center of the platform at a specified height.  
 ```python3 train.py --env MembraneJump-v0 --render-env --output-name <output folder name>```
 
-#### Moving to target ####
+##### Moving to target #####
 Moves the ball to a specified target position (x,y). The ball's starting position is arbitary.  
 ```python3 train.py --env MembraneTarget-v0 --render-env --output-name <output folder name>```
 
-#### Ordering ####
+##### Ordering #####
 Moves the green box to be before the yellow box. The box's are also horizontally aligned.  
 ```python3 train.py --env MembraneOrder-v0 --render-env --output-name <output folder name>```
 
-#### Stacking ####
+##### Stacking #####
 Stacks the green box on top of the yellow box.  
 ```python3 train.py --env MembraneStack-v0 --render-env --output-name <output folder name>```
 
-#### Rotating ####
+##### Rotating #####
 Rotates the square box by 180 degrees (angle could be adjusted).  
 ```python3 train.py --env MembraneRotate-v0 --render-env --output-name <output folder name>```
 
