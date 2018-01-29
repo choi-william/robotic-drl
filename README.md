@@ -1,13 +1,41 @@
-# README #
-
-This README would normally document whatever steps are necessary to get your application up and running.
+# DEEEP REINFORCEMENT LEARNING PLATFORM #
 
 ### What is this repository for? ###
 
 * Capstone Project II codebase
 * v1
 
-### Files ###
+### Installation Instructions ###
+
+If you intend to only run the simulation, all the information you need including the installation instructions  
+is provided in the README.md file under the _gym-drl_ folder.  
+i.e. robotic-ai/gym-drl/README.md  
+
+There are couple other dependencies to be resolved if you intend to run the hardware platform as well.  
+If space is available, we suggest installing these as well after following the installation instructions in the above link.
+
+##### OpenCV #####
+
+Installation instructions for ubuntu can be found here:
+https://www.pyimagesearch.com/2016/10/24/ubuntu-16-04-how-to-install-opencv/
+
+If you want to avoid using virtualenvironments (not that they're bad)
+```pip3 install opencv-python```
+
+##### PySerial #####
+
+Used for arduino communication
+```pip3 install pyserial```
+
+##### FFmpeg #####
+
+Necessary to show simulation visuals
+```brew install ffmpeg```
+
+### File Structure ###
+
+_robotic-ai/algorithm_ contains the ddpg algorithm and files associated with training
+_robotic-ai/gym-drl_ contains the hardware and simulated environments and files for interfacing with the hardware platform.
 
 #### algorithm/train ####
 
@@ -45,68 +73,3 @@ A program which uses a set of 10+ images to obtain camera parameters used to rem
 
 An experimental training file that takes in a pixel input
 
-### Installation Instructions ###
-
-#### Python Dependencies ####
-
-##### Python3 #####
-Linux: `sudo apt-get install python3.6`
-
-Mac: `brew install python3`
-
-##### Tensorflow #####
-
-Tensorflow is our machine learning library that will handle all the hard ML stuff.
-
-https://www.tensorflow.org/install/
-
-I recommend installing through native-pip
-
-Make sure that all installation is with python3 (eg. use pip3 instead of pip always)
-
-##### TFLearn #####
-
-TFLearn is a wrapper on top of tensorflow that simplifies it even more.
-
-`pip3 install tflearn`
-
-##### OpenAI gym #####
-
-OpenAI gym is our reinforcement learning environment testing framework.
-
-`pip3 install gym`
-
-##### pyBox2D #####
-
-Pybox2D is used for our physics enviornment
-
-Install instructions: https://github.com/pybox2d/pybox2d/blob/master/INSTALL.md
-
-##### OpenCV #####
-
-Installation instructions for ubuntu can be found here:
-
-https://www.pyimagesearch.com/2016/10/24/ubuntu-16-04-how-to-install-opencv/
-
-If you want to avoid using virtualenvironments (not that they're bad)
-
-`pip3 install opencv-python`
-
-##### PySerial #####
-
-Used for arduino communication
-
-`pip3 install pyserial`
-
-#### Misc Dependencies ####
-`brew install ffmpeg` - Necessary to show simulation visuals
-
-### Running the code ###
-
-`python3 ddpg.py --render-env`
-
-Runs a pendulum environment by default.
-
-`tensorboard --logdir=robotic-ai/results/tf_ddpg/`
-
-Outputs useful plots in realtime. (run in separate terminal window)
