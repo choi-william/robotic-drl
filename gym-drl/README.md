@@ -5,7 +5,7 @@ pyBox2D was used for physics simulation.
 
 ## Getting Started with the Simulated Environments ##
 To only run the simulated environments, all you need to do is to follow the steps outlined below.  
-If you want to interface with the hardware platform, please follow the remainder of instructions provided in the main  README file.
+If you want to interface with the hardware platform, please follow the remainder of instructions provided in the main  README file.  
 It's also recommended that a python virtual environment (venv) is used.
 
 ### Installation Instructions ###
