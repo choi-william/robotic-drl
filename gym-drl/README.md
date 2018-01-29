@@ -58,6 +58,7 @@ pip install -e .
 
 There are several environments you can choose to train on. More details regarding the environments are provided below in the _Environments_ section.  
 
+#### Training ####
 To start training you have to execute _train.py_ located within the _algorithm_ folder as shown below:  
 ```python3 train.py --env <environment name> --render-env --output-name <output folder name>```  
 
@@ -73,6 +74,12 @@ for different training sessions. This will result in the data being overwritten.
 To visualize the data stored in the _tf_ddpg_ folder run the following command:  
 ```tensorboard --logdir results/tf_ddpg/<output folder name>/. ```  
 This outputs useful plots in realtime. We recommend running this in a separate terminal window.  
+
+#### Executing ####
+To start executing the model that you've trained, you have to execute _execute.py_ located wihtin the _algorithm_ folder as shown below:  
+```python3 execute.py --env <environment name> --render-env --model-name <model folder name>```
+
+The "model folder name" is the output folder name specified during the training session.
 
 ### Environments ###
 
