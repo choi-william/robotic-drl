@@ -18,15 +18,15 @@ If space is available, we suggest installing these as well after following the i
 Installation instructions for ubuntu can be found here:  
 https://www.pyimagesearch.com/2016/10/24/ubuntu-16-04-how-to-install-opencv/  
 
-If you want to avoid using virtualenvironments (not that they're bad)
+If you want to avoid using virtualenvironments (not that they're bad)  
 ```pip3 install opencv-python```
 
 ##### PySerial #####
-Used for arduino communication
+Used for arduino communication  
 ```pip3 install pyserial```
 
 ##### FFmpeg #####
-Necessary to show simulation visuals
+Necessary to show simulation visuals  
 ```brew install ffmpeg```
 
 ### File Structure ###
@@ -34,27 +34,27 @@ Necessary to show simulation visuals
 _robotic-ai/algorithm_ contains the ddpg algorithm and files associated with training  
 _robotic-ai/gym-drl_ contains the hardware and simulated environments and files for interfacing with the hardware platform.  
 
-#### algorithm/train ####
+##### algorithm/train #####
 
 Trains an actor neural network based on the specified simulation
 
-#### algorithm/execute ####
+##### algorithm/execute #####
 
 Executes a given actor neural network model in the specified simulation
 
-#### algorithm/imitate ####
+##### algorithm/imitate #####
 
 Takes in state-action pairs to train an actor neural network.
 
-#### algorithm/replay_buffer ####
+##### algorithm/replay_buffer #####
 
 A supporting file to implement a replay buffer
 
-#### algorithm/architectures ####
+##### algorithm/architectures #####
 
 A supporting file that specified neural network architectures so they can be dynamically loaded.
 
-#### camera/capture ####
+##### camera/capture #####
 
 A simple program to capture images from a camera, and includes several flags:
 
@@ -62,11 +62,11 @@ A simple program to capture images from a camera, and includes several flags:
 - -t: Performs object tracking and provides sliders to tune. 's' can be pressed to save the parameters
 - -a: Launches tracking which can be used in the arena. Also uses various flags for custom parameter loading
 
-#### camera/calibrate ####
+##### camera/calibrate #####
 
 A program which uses a set of 10+ images to obtain camera parameters used to remove lens distortion
 
-#### other/ddpg_visual ####
+##### other/ddpg_visual #####
 
 An experimental training file that takes in a pixel input
 
