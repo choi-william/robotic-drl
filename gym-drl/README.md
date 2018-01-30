@@ -118,24 +118,26 @@ Rotates the square box by 180 degrees (angle could be adjusted).
 
 ### Creating a custom environment ###
 
-Creating a new environment can be accomplished by modifying the two __init__.py files in this repo as described in:
+Creating a new environment can be accomplished by modifying the two __init__.py files in this repo as described in:  
 https://github.com/openai/gym/tree/master/gym/envs
 
-When creating an environment that can transfer the hardware, it is highly recommended to use the helper functions in gymdrl/envs/membrane_base, as done in the other environments in this repo. This performs a lot of the membrane generation, and leaves one to design a reward function, the state vector, and the objects to manipulate. In retrospect, this should have been implemented with class inheritance, but a temporary fix spun out of control. 
+When creating an environment that can transfer the hardware, it is highly recommended to use the helper functions in gymdrl/envs/membrane_base, as done in the other environments in this repo.  
+This performs a lot of the membrane generation, and leaves one to design a reward function, the state vector, and the objects to manipulate.  
+In retrospect, this should have been implemented with class inheritance, but a temporary fix spun out of control. 
 
 ### Training on Hardware ###
 
-Provided the following:
--all necessary hardware dependencies are installed (see root README)
--arduino is plugged into the computer
--arduino has the serial communication program flashed on it
--webcam connected to computer
--Power supply is connected to the hardware (and changed to 7V)
+Provided the following:  
+-all necessary hardware dependencies are installed (see root README)  
+-arduino is plugged into the computer  
+-arduino has the serial communication program flashed on it  
+-webcam connected to computer  
+-Power supply is connected to the hardware (and changed to 7V)  
 
-then one can run the hardware environment through gym in the regular ways described above:
-```python3 train.py --env MembraneHardware-v0 --output-name <output folder name>```
-```python3 execute.py --env MembraneHardware-v0 --model-name <model name>```
+then one can run the hardware environment through gym in the regular ways described above:  
+```python3 train.py --env MembraneHardware-v0 --output-name <output folder name>```  
+```python3 execute.py --env MembraneHardware-v0 --model-name <model name>```  
 
-The reward function of this environment is currently fixed but can be modified.
+The reward function of this environment is currently fixed but can be modified.  
 
 
