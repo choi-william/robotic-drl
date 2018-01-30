@@ -128,13 +128,13 @@ In retrospect, this should have been implemented with class inheritance, but a t
 ### Training on Hardware ###
 
 Provided the following:  
--all necessary hardware dependencies are installed (see root README)  
--arduino is plugged into the computer  
--arduino has the serial communication program flashed on it  
--webcam connected to computer  
--Power supply is connected to the hardware (and changed to 7V)  
+* all necessary hardware dependencies are installed (see root README)  
+* arduino is plugged into the computer  
+* arduino has the serial communication program flashed on it  
+* webcam connected to computer  
+* Power supply is connected to the hardware (and changed to 7V)  
 
-then one can run the hardware environment through gym in the regular ways described above:  
+Then, one can run the hardware environment through gym in the regular ways described above:  
 ```python3 train.py --env MembraneHardware-v0 --output-name <output folder name>```  
 ```python3 execute.py --env MembraneHardware-v0 --model-name <model name>```  
 
