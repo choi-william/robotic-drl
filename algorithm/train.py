@@ -263,14 +263,6 @@ def train(sess, env, args, actor, critic, actor_noise):
     if args['input_name'] is not None:
         saver.restore(sess, args['model_dir']+'/'+args['input_name']+'/'+args['input_name'])
 
-        if (not args['fresh_train']):
-            train_state_dir = args['model_dir']+'/'+args['input_name'] + '/' + args['input_name'] + '_trainstate' + '.p'
-            train_state = pickle.load( open( train_state_dir, "rb" ) )
-
-            actor_noise.x_prev = train_state['x_prev']
-            replay_buffer.restore_state(train_state['rb'])
-
-
     for i in range(int(args['max_episodes'])):
 
         if (args['random_policy']):
@@ -285,10 +277,7 @@ def train(sess, env, args, actor, critic, actor_noise):
         if i % 10 == 0:
             model_folder = args['model_dir']+'/'+args['output_name'] + '/'
             saver.save(sess, model_folder + args['output_name'])
-            train_state = {'x_prev': actor_noise.x_prev, 'rb': replay_buffer.get_state()}
-            
-            #commented out the train_state for now because the file grows in size rapidly
-            #pickle.dump( train_state, open( model_folder + args['output_name'] + '_trainstate' + '.p', "wb" ))
+
             print('Saved updated model\n')
 
         for j in range(int(args['max_episode_len'])):
@@ -437,10 +426,8 @@ if __name__ == '__main__':
     parser.add_argument('--model-dir', help='directory for storing saved models', default='../results/models')
     parser.add_argument('--output-name', help='name of the saved model', default='unnamed')
     parser.add_argument('--input-name', help='name of the saved model', default=None)
-    parser.add_argument('--fresh-train', help='render the gym env', action='store_true')
     parser.add_argument('--random-policy', help='render the gym env', action='store_true')
 
-    parser.set_defaults(fresh_train=True)
     parser.set_defaults(render_env=True)
     parser.set_defaults(use_gym_monitor=False)
     parser.set_defaults(random_policy=False)
