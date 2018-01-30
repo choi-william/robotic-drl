@@ -128,11 +128,11 @@ In retrospect, this should have been implemented with class inheritance, but a t
 ### Training on Hardware ###
 
 Provided the following:  
-* all necessary hardware dependencies are installed (see root README)  
-* arduino is plugged into the computer  
-* arduino has the serial communication program flashed on it  
-* webcam connected to computer  
-* Power supply is connected to the hardware (and changed to 7V)  
+  - All necessary hardware dependencies are installed (see root README)  
+  - Arduino is plugged into the computer  
+  - Arduino has the serial communication program flashed on it  
+  - Webcam connected to computer  
+  - Power supply is connected to the hardware (and changed to 7V)  
 
 Then, one can run the hardware environment through gym in the regular ways described above:  
 ```python3 train.py --env MembraneHardware-v0 --output-name <output folder name>```  
