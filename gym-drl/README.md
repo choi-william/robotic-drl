@@ -75,9 +75,14 @@ To visualize the data stored in the _tf_ddpg_ folder run the following command:
 ```tensorboard --logdir results/tf_ddpg/<output folder name>/. ```  
 This outputs useful plots in realtime. We recommend running this in a separate terminal window.  
 
+Note: In this case where one desires a policy to be trained from another policy (to continue training, or attempt transfer learning) the _--input-name_ flag can be used.
+
+```python3 train.py --env <environment name> --output-name <output folder name> --input-name <input model name>```  
+Where the input model name is a previously trained model that exists in results/models/
+
 ##### Executing #####
 To start executing the model that you've trained, you have to execute _execute.py_ located wihtin the _algorithm_ folder as shown below:  
-```python3 execute.py --env <environment name> --render-env --model-name <model folder name>```
+```python3 execute.py --env <environment name> --model-name <model folder name>```
 
 The "model folder name" is the output folder name specified during the training session.
 
