@@ -60,7 +60,7 @@ There are several environments you can choose to train on. More details regardin
 
 ##### Training #####
 To start training you have to execute _train.py_ located within the _algorithm_ folder as shown below:  
-```python3 train.py --env <environment name> --render-env --output-name <output folder name>```  
+```python3 train.py --env <environment name> --output-name <output folder name>```  
 
 Running a training session for the first time creates a _results_ folder at the top level of this repository.  
 This folder contains two subfolders: _models and tf_ddpg_.  
