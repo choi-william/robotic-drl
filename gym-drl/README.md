@@ -47,6 +47,10 @@ python3 setup.py install
 PyGame is required to render the examples provided through pyBox2D. This can also be installed using pip.  
 ```pip3 install pygame```
 
+##### FFmpeg #####
+Necessary to show simulation visuals  
+```brew install ffmpeg```
+
 ##### Finally installing gym-drl #####
 To install gym-drl, clone the repository and then subsequently install it using pip
 ```
@@ -90,25 +94,48 @@ The "model folder name" is the output folder name specified during the training 
 
 ##### Basketball #####
 Shoots the ball through the hoop.  
-```python3 train.py --env MembraneBasket-v0 --render-env --output-name <output folder name>```
+```python3 train.py --env MembraneBasket-v0 --output-name <output folder name>```
 
 ##### Bouncing #####
 Bounces the ball at the center of the platform at a specified height.  
-```python3 train.py --env MembraneJump-v0 --render-env --output-name <output folder name>```
+```python3 train.py --env MembraneJump-v0 --output-name <output folder name>```
 
 ##### Moving to target #####
 Moves the ball to a specified target position (x,y). The ball's starting position is arbitary.  
-```python3 train.py --env MembraneTarget-v0 --render-env --output-name <output folder name>```
+```python3 train.py --env MembraneTarget-v0 --output-name <output folder name>```
 
 ##### Ordering #####
 Moves the green box to be before the yellow box. The box's are also horizontally aligned.  
-```python3 train.py --env MembraneOrder-v0 --render-env --output-name <output folder name>```
+```python3 train.py --env MembraneOrder-v0 --output-name <output folder name>```
 
 ##### Stacking #####
 Stacks the green box on top of the yellow box.  
-```python3 train.py --env MembraneStack-v0 --render-env --output-name <output folder name>```
+```python3 train.py --env MembraneStack-v0 --output-name <output folder name>```
 
 ##### Rotating #####
 Rotates the square box by 180 degrees (angle could be adjusted).  
-```python3 train.py --env MembraneRotate-v0 --render-env --output-name <output folder name>```
+```python3 train.py --env MembraneRotate-v0 --output-name <output folder name>```
+
+### Creating a custom environment ###
+
+Creating a new environment can be accomplished by modifying the two __init__.py files in this repo as described in:
+https://github.com/openai/gym/tree/master/gym/envs
+
+When creating an environment that can transfer the hardware, it is highly recommended to use the helper functions in gymdrl/envs/membrane_base, as done in the other environments in this repo. This performs a lot of the membrane generation, and leaves one to design a reward function, the state vector, and the objects to manipulate. In retrospect, this should have been implemented with class inheritance, but a temporary fix spun out of control. 
+
+### Training on Hardware ###
+
+Provided the following:
+-all necessary hardware dependencies are installed (see root README)
+-arduino is plugged into the computer
+-arduino has the serial communication program flashed on it
+-webcam connected to computer
+-Power supply is connected to the hardware (and changed to 7V)
+
+then one can run the hardware environment through gym in the regular ways described above:
+```python3 train.py --env MembraneHardware-v0 --output-name <output folder name>```
+```python3 execute.py --env MembraneHardware-v0 --model-name <model name>```
+
+The reward function of this environment is currently fixed but can be modified.
+
 
