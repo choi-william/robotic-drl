@@ -7,34 +7,8 @@ register(
     reward_threshold=200,
 )
 
-register(
-    id='Membrane-v1',
-    entry_point='gymdrl.envs:Membrane',
-    max_episode_steps=1000,
-    reward_threshold=300,
-)
 
-register(
-    id='MembraneWithoutLinkages-v1',
-    entry_point='gymdrl.envs:MembraneWithoutLinkages',
-    max_episode_steps=1000,
-    reward_threshold=300,
-)
-
-register(
-    id='MembraneJump-v0',
-    entry_point='gymdrl.envs:MembraneJump',
-    max_episode_steps=500,
-    reward_threshold=300,
-)
-
-register(
-    id='DoubleJoint-v0',
-    entry_point='gymdrl.envs:DoubleJoint',
-    max_episode_steps=1000,
-    reward_threshold=500,
-)
-
+# HARDWARE MEMBRANE ENVIRONMENT
 register(
     id='MembraneHardware-v0',
     entry_point='gymdrl.envs:MembraneHardware',
@@ -42,6 +16,13 @@ register(
     reward_threshold=300,
 )
 
+# SIMULATED ENVIRONMENTS
+register(
+    id='MembraneBasket-v0',
+    entry_point='gymdrl.envs:MembraneBasket',
+    max_episode_steps=500,
+    reward_threshold=300,
+)
 register(
     id='MembraneCalibration-v0',
     entry_point='gymdrl.envs:MembraneCalibration',
@@ -49,8 +30,39 @@ register(
     reward_threshold=300,
 )
 register(
-    id='HardwareSimulation-v0',
-    entry_point='gymdrl.envs:HardwareSimulation',
+    id='MembraneJump-v0',
+    entry_point='gymdrl.envs:MembraneJump',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
+register(
+    id='MembraneOrder-v0',
+    entry_point='gymdrl.envs:MembraneOrder',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
+register(
+    id='MembraneRotate-v0',
+    entry_point='gymdrl.envs:MembraneRotate',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
+register(
+    id='MembraneStack-v0',
+    entry_point='gymdrl.envs:MembraneStack',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
+register(
+    id='MembraneTarget-v0',
+    entry_point='gymdrl.envs:MembraneTarget',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
+
+register(
+    id='MembraneMoveArb-v0',
+    entry_point='gymdrl.envs:MembraneMoveArb',
     max_episode_steps=300,
     reward_threshold=300,
 )
@@ -60,5 +72,3 @@ register(
     max_episode_steps=300,
     reward_threshold=300,
 )
-
-

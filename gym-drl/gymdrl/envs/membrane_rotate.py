@@ -14,14 +14,16 @@ import sys
 sys.path.append(gymdrl.__file__[:-11] + 'envs') #hacky but necessary
 import membrane_base
 
-# MEMBRANE JUMP ENVIRONMENT
-#   - bounces the ball at the center of the platform
+# MEMBRANE ROTATE ENVIRONMENT
+#   - rotates a square object by a specified angle: 90, 180, 270, 360, etc
 # 
 # Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
 
 FPS = 50
-# Desired Object Position
-TARGET_POS = [membrane_base.BOX_WIDTH/2,membrane_base.BOX_HEIGHT/2]
+# Set the rotation angle for the task here
+ROTATION_ANGLE = np.pi
+# Set the object size for the square here
+OBJ_SIZE = membrane_base.BOX_WIDTH*0.2
 
 ########################
 # Rendering Parameters #
@@ -39,7 +41,7 @@ OBJ_VEL_STDDEV = 0 # Nothing set currently
 ACTUATOR_POS_STDDEV = membrane_base.BOX_WIDTH/100.0
 ACTUATOR_VEL_STDDEV = 0 # Nothing set currently
 
-class MembraneJump(gym.Env):
+class MembraneRotate(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : FPS
@@ -53,11 +55,10 @@ class MembraneJump(gym.Env):
         # Initializing other common components in the environment
         membrane_base.init_helper(self)
 
-        self.count = 0
         self.prev_state = None
 
         # Observation Space 
-        high = np.array([np.inf]*14)
+        high = np.array([np.inf]*15)
         self.observation_space = spaces.Box(low=-high,high=high)
 
         # Continuous action space; one for each linear actuator (5 total)
@@ -83,16 +84,17 @@ class MembraneJump(gym.Env):
 
         # Creating the object to manipulate
         object_fixture = b2FixtureDef(
-            shape = b2CircleShape(radius=membrane_base.OBJ_SIZE/2),
-            density = 0.3,
+            shape=b2PolygonShape(box=(OBJ_SIZE/2, OBJ_SIZE/2)),
+            density = 1,
             friction = 0.6,
-            restitution = 0.5
+            restitution = 0.0
             )
-        object_position = (self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET), membrane_base.BOX_HEIGHT/3)
+        
+        object_position = (membrane_base.BOX_WIDTH/2, OBJ_SIZE/2 + membrane_base.LINK_HEIGHT)
         self.object = self.world.CreateDynamicBody(
             position = object_position,
             fixtures = object_fixture,
-            linearDamping = 0.3 # Control this parameter for surface friction
+            linearDamping = 0.6 # Control this parameter for surface friction
             )
         self.object.color1 = (1,1,0)
         self.object.color2 = (0,0,0)
@@ -102,11 +104,6 @@ class MembraneJump(gym.Env):
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
     def _step(self, action):
-        self.count = self.count + 1
-        
-#        if self.prev_state is not None:
-#            action = self.programmed_policy(self.prev_state)
-
         # Set motor speeds
         for i, actuator in enumerate(self.actuator_list):
             actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
@@ -123,6 +120,8 @@ class MembraneJump(gym.Env):
             self.object.linearVelocity.x,
             self.object.linearVelocity.y
             ]
+        object_angle = angle_normalize(self.object.angle)
+        
         actuator_pos = [
             np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV),
             np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV),
@@ -144,6 +143,7 @@ class MembraneJump(gym.Env):
             (object_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
             object_vel[0]/((membrane_base.BOX_WIDTH/16)*FPS),
             object_vel[1]/((membrane_base.BOX_HEIGHT/16)*FPS),
+            object_angle/180.0,
             (actuator_pos[0]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
             (actuator_pos[1]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
             (actuator_pos[2]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
@@ -155,17 +155,13 @@ class MembraneJump(gym.Env):
             (actuator_vel[3])/membrane_base.MOTOR_SPEED,
             (actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
-        self.prev_state = state
-
-        assert len(state)==14            
+        assert len(state)==15            
 
         # Rewards
         reward = 0
-        shaping = -200*np.abs(TARGET_POS[1]-object_pos[1])/membrane_base.BOX_HEIGHT - 200*np.abs(TARGET_POS[0]-object_pos[0])/membrane_base.BOX_WIDTH - 10*np.abs(state[2]) + 300*(object_pos[1] - max(actuator_pos))/TARGET_POS[1]
 
-        if (object_pos[1] - max(actuator_pos)) > 4:
-            shaping += 20
-        
+        shaping = -200*np.abs(state[4]) - 100*np.abs(state[2]) - 100*np.abs(state[3])
+
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
@@ -174,10 +170,12 @@ class MembraneJump(gym.Env):
         for a in action:
             reward -= 0.05*np.clip(np.abs(a), 0, 1)
 
-        if np.abs(TARGET_POS[1]-object_pos[1]) < 1 and object_vel[1] < 0.05:
-            reward += 100
         done = False
-        
+
+        if np.abs(object_angle) < 5.0 and np.abs(state[2]) < 0.0001 and np.abs(state[3]) < 0.0001:
+            reward += 100
+            done = True
+
         return np.array(state), reward, done, {}
 
     def _render(self, mode='human', close=False):
@@ -193,36 +191,12 @@ class MembraneJump(gym.Env):
 
         membrane_base.render_helper(self)
 
-        # Target Position Visualized
-        self.viewer.draw_polyline( [(TARGET_POS[0], 0), (TARGET_POS[0], membrane_base.BOX_HEIGHT)], color=(1,0,0) )
-
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
-    
-    def programmed_policy(self, state):
 
-        FAST_SPEED = 1;
-        HIGH_SPEED = 0.8;
-        MEDIUM_SPEED = 0.5;
-        SLOW_SPEED = 0.1;
-
-        ACTUATOR_START = membrane_base.BOX_SIDE_OFFSET
-        ACTUATOR_SPACING = membrane_base.GAP
-
-        act_pos = [(membrane_base.BOX_SIDE_OFFSET+membrane_base.GAP*i) for i in range(5)]
-
-        p = (self.object.position.x-membrane_base.BOX_SIDE_OFFSET)/(membrane_base.GAP)
-        action = -FAST_SPEED*np.ones(5)
-
-        if (TARGET_POS[0]-self.object.position.x) > 0:
-            #move right
-            action[int(np.ceil(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
-            action[int(np.floor(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
-        else:
-            #move left
-            action[int(np.floor(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
-            action[int(np.ceil(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
-        return action
+def angle_normalize(x):
+    return (((x-ROTATION_ANGLE+np.pi) % (2*np.pi)) - np.pi)*180/np.pi
 
 if __name__=="__main__":
-    env = MembraneJump()
+    env = MembraneRotate()
     s = env.reset()
+

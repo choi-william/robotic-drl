@@ -14,14 +14,15 @@ import sys
 sys.path.append(gymdrl.__file__[:-11] + 'envs') #hacky but necessary
 import membrane_base
 
-# MEMBRANE JUMP ENVIRONMENT
-#   - bounces the ball at the center of the platform
+# MEMBRANE BASKET ENVIRONMENT
+#   - shoots a ball into the basket
 # 
 # Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
 
 FPS = 50
 # Desired Object Position
-TARGET_POS = [membrane_base.BOX_WIDTH/2,membrane_base.BOX_HEIGHT/2]
+TARGET_POS = [membrane_base.BOX_WIDTH*5/30,membrane_base.BOX_WIDTH*15/30]
+BASKET_WIDTH = membrane_base.BOX_WIDTH*8/30
 
 ########################
 # Rendering Parameters #
@@ -39,7 +40,7 @@ OBJ_VEL_STDDEV = 0 # Nothing set currently
 ACTUATOR_POS_STDDEV = membrane_base.BOX_WIDTH/100.0
 ACTUATOR_VEL_STDDEV = 0 # Nothing set currently
 
-class MembraneJump(gym.Env):
+class MembraneBasket(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : FPS
@@ -50,13 +51,16 @@ class MembraneJump(gym.Env):
         self.viewer = None # to be used later for rendering
         # Object to be manipulated
         self.object = None 
+        # Basket to shoot the object through
+        self.basketL = None
+        self.basketR = None
         # Initializing other common components in the environment
         membrane_base.init_helper(self)
 
-        self.count = 0
         self.prev_state = None
 
         # Observation Space 
+        # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
         high = np.array([np.inf]*14)
         self.observation_space = spaces.Box(low=-high,high=high)
 
@@ -76,19 +80,37 @@ class MembraneJump(gym.Env):
         membrane_base.destroy_helper(self)
         self.world.DestroyBody(self.object)
         self.object = None
+        self.world.DestroyBody(self.basketL)
+        self.basketL = None
+        self.world.DestroyBody(self.basketR)
+        self.basketR = None
 
     def _reset(self):
         self._destroy()
         membrane_base.reset_helper(self)
+
+        # Creating the baskets
+        self.basketL = self.world.CreateStaticBody(
+            position = (TARGET_POS[0]-BASKET_WIDTH/2, TARGET_POS[1]),
+            shapes = b2CircleShape(radius=membrane_base.ACTUATOR_TIP_SIZE/4)
+            )
+        self.basketL.color1 = (0,0,0)
+        self.basketL.color2 = (0,0,0)
+        self.basketR = self.world.CreateStaticBody(
+            position = (TARGET_POS[0]+BASKET_WIDTH/2, TARGET_POS[1]),
+            shapes = b2CircleShape(radius=membrane_base.ACTUATOR_TIP_SIZE/4)
+            )
+        self.basketR.color1 = (0,0,0)
+        self.basketR.color2 = (0,0,0)       
 
         # Creating the object to manipulate
         object_fixture = b2FixtureDef(
             shape = b2CircleShape(radius=membrane_base.OBJ_SIZE/2),
             density = 0.3,
             friction = 0.6,
-            restitution = 0.5
+            restitution = 0.0
             )
-        object_position = (self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET), membrane_base.BOX_HEIGHT/3)
+        object_position = (self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET), membrane_base.BOX_HEIGHT/5)
         self.object = self.world.CreateDynamicBody(
             position = object_position,
             fixtures = object_fixture,
@@ -97,16 +119,15 @@ class MembraneJump(gym.Env):
         self.object.color1 = (1,1,0)
         self.object.color2 = (0,0,0)
 
-        self.drawlist = self.drawlist + [self.object]
+        self.drawlist = self.drawlist + [self.object,self.basketL,self.basketR] 
 
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
     def _step(self, action):
-        self.count = self.count + 1
         
 #        if self.prev_state is not None:
 #            action = self.programmed_policy(self.prev_state)
-
+        
         # Set motor speeds
         for i, actuator in enumerate(self.actuator_list):
             actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
@@ -156,7 +177,6 @@ class MembraneJump(gym.Env):
             (actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
         self.prev_state = state
-
         assert len(state)==14            
 
         # Rewards
@@ -174,8 +194,12 @@ class MembraneJump(gym.Env):
         for a in action:
             reward -= 0.05*np.clip(np.abs(a), 0, 1)
 
-        if np.abs(TARGET_POS[1]-object_pos[1]) < 1 and object_vel[1] < 0.05:
-            reward += 100
+        if np.abs(TARGET_POS[0]-object_pos[0]) < BASKET_WIDTH/2 and np.abs(TARGET_POS[1]-object_pos[1]) < 2: 
+            if object_vel[1] < 0:
+                reward += 200
+            else:
+                reward -= 300
+                
         done = False
         
         return np.array(state), reward, done, {}
@@ -193,36 +217,43 @@ class MembraneJump(gym.Env):
 
         membrane_base.render_helper(self)
 
-        # Target Position Visualized
-        self.viewer.draw_polyline( [(TARGET_POS[0], 0), (TARGET_POS[0], membrane_base.BOX_HEIGHT)], color=(1,0,0) )
-
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
-    
-    def programmed_policy(self, state):
+
+    def programmed_policy(self,state):
 
         FAST_SPEED = 1;
-        HIGH_SPEED = 0.8;
         MEDIUM_SPEED = 0.5;
         SLOW_SPEED = 0.1;
+        VERY_SLOW_SPEED = 0.05;
 
         ACTUATOR_START = membrane_base.BOX_SIDE_OFFSET
         ACTUATOR_SPACING = membrane_base.GAP
+        
+        SIDE_X = membrane_base.BOX_WIDTH*25/30
+        LAUNCH_X = membrane_base.BOX_WIDTH*19/30
 
-        act_pos = [(membrane_base.BOX_SIDE_OFFSET+membrane_base.GAP*i) for i in range(5)]
+        p = (self.object.position.x-ACTUATOR_START)/(ACTUATOR_SPACING)
+        
+        q = (LAUNCH_X-ACTUATOR_START)/ACTUATOR_SPACING
 
-        p = (self.object.position.x-membrane_base.BOX_SIDE_OFFSET)/(membrane_base.GAP)
-        action = -FAST_SPEED*np.ones(5)
+        action = -SLOW_SPEED*np.ones(5)
 
-        if (TARGET_POS[0]-self.object.position.x) > 0:
+        if (SIDE_X-self.object.position.x) > 0:
             #move right
-            action[int(np.ceil(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
-            action[int(np.floor(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
+            action[int(np.floor(p))] = MEDIUM_SPEED
+
         else:
             #move left
-            action[int(np.floor(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
-            action[int(np.ceil(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
-        return action
+            action[int(np.ceil(p))] = MEDIUM_SPEED
+
+        if (self.object.linearVelocity.x < 0 and self.object.position.x < LAUNCH_X):
+            action[4] = FAST_SPEED
+            action[3] = FAST_SPEED       
+            action[2] = FAST_SPEED       
+        
+                           
+        return action    
 
 if __name__=="__main__":
-    env = MembraneJump()
+    env = MembraneBasket()
     s = env.reset()

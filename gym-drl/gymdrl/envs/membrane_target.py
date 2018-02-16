@@ -14,22 +14,13 @@ import sys
 sys.path.append(gymdrl.__file__[:-11] + 'envs') #hacky but necessary
 import membrane_base
 
-# MEMBRANE JUMP ENVIRONMENT
-#   - bounces the ball at the center of the platform
+# MEMBRANE TARGET ENVIRONMENT
+#   - moves object to a specified (x,y) position on the platform
+#   - target position changes with each episode
 # 
 # Copyright (c) 2017 William Choi, Alex Kyriazis, Ivan Zinin; all rights reserved
 
 FPS = 50
-# Desired Object Position
-TARGET_POS = [membrane_base.BOX_WIDTH/2,membrane_base.BOX_HEIGHT/2]
-
-########################
-# Rendering Parameters #
-########################
-TEMPW = membrane_base.BOX_WIDTH
-TEMPH = membrane_base.BOX_HEIGHT_BELOW_ACTUATORS + membrane_base.BOX_HEIGHT
-VIEWPORT_W = int(1000*TEMPW / (TEMPW + TEMPH))
-VIEWPORT_H = int(1000*TEMPH / (TEMPW + TEMPH))
 
 ####################
 # Noise Parameters #
@@ -39,7 +30,15 @@ OBJ_VEL_STDDEV = 0 # Nothing set currently
 ACTUATOR_POS_STDDEV = membrane_base.BOX_WIDTH/100.0
 ACTUATOR_VEL_STDDEV = 0 # Nothing set currently
 
-class MembraneJump(gym.Env):
+########################
+# Rendering Parameters #
+########################
+TEMPW = membrane_base.BOX_WIDTH
+TEMPH = membrane_base.BOX_HEIGHT_BELOW_ACTUATORS + membrane_base.BOX_HEIGHT
+VIEWPORT_W = int(1000*TEMPW / (TEMPW + TEMPH))
+VIEWPORT_H = int(1000*TEMPH / (TEMPW + TEMPH))
+
+class MembraneTarget(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : FPS
@@ -48,16 +47,17 @@ class MembraneJump(gym.Env):
     def __init__(self):
         self._seed()
         self.viewer = None # to be used later for rendering
+        self.target_pos = None
         # Object to be manipulated
         self.object = None 
         # Initializing other common components in the environment
         membrane_base.init_helper(self)
-
-        self.count = 0
+        
         self.prev_state = None
 
         # Observation Space 
-        high = np.array([np.inf]*14)
+        # [object posx, object posy, actuator1 pos.y, ... , actuator5 pos.y, actuator1 speed.y, ... , actuator5 speed.y]
+        high = np.array([np.inf]*16)
         self.observation_space = spaces.Box(low=-high,high=high)
 
         # Continuous action space; one for each linear actuator (5 total)
@@ -81,14 +81,25 @@ class MembraneJump(gym.Env):
         self._destroy()
         membrane_base.reset_helper(self)
 
+        self.target_pos = [np.random.rand()*(membrane_base.BOX_WIDTH-membrane_base.OBJ_SIZE)+membrane_base.OBJ_SIZE/2,5]
+        
         # Creating the object to manipulate
         object_fixture = b2FixtureDef(
             shape = b2CircleShape(radius=membrane_base.OBJ_SIZE/2),
-            density = 0.3,
-            friction = 0.6,
-            restitution = 0.5
+            density = 0.01,
+            friction = 0.05,
+            restitution = 0.2
             )
-        object_position = (self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET), membrane_base.BOX_HEIGHT/3)
+        # Randomizing object's initial position
+        # object_position = (
+        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
+        #     membrane_base.BOX_HEIGHT/5
+        #     )
+        # object_position = (
+        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
+        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
+        #     )
+        object_position = (membrane_base.BOX_WIDTH/2, 3)
         self.object = self.world.CreateDynamicBody(
             position = object_position,
             fixtures = object_fixture,
@@ -102,8 +113,8 @@ class MembraneJump(gym.Env):
         return self._step(np.array([0,0,0,0,0]))[0] # action: zero motor speed
 
     def _step(self, action):
-        self.count = self.count + 1
         
+        # Uncomment the following two lines to use the programmed policy        
 #        if self.prev_state is not None:
 #            action = self.programmed_policy(self.prev_state)
 
@@ -140,42 +151,47 @@ class MembraneJump(gym.Env):
 
         # Observation space (state)
         state = [
+            (self.target_pos[0]-membrane_base.BOX_WIDTH/2)/(membrane_base.BOX_WIDTH/2),
+            (self.target_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
             (object_pos[0]-membrane_base.BOX_WIDTH/2)/(membrane_base.BOX_WIDTH/2),
             (object_pos[1]-membrane_base.BOX_HEIGHT/2)/(membrane_base.BOX_HEIGHT/2),
-            object_vel[0]/((membrane_base.BOX_WIDTH/16)*FPS),
-            object_vel[1]/((membrane_base.BOX_HEIGHT/16)*FPS),
+            2*object_vel[0]/membrane_base.MOTOR_SPEED,
+            2*object_vel[1]/membrane_base.MOTOR_SPEED,
             (actuator_pos[0]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
             (actuator_pos[1]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
             (actuator_pos[2]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
             (actuator_pos[3]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
             (actuator_pos[4]-membrane_base.ACTUATOR_TRANSLATION_MEAN)/membrane_base.ACTUATOR_TRANSLATION_AMP,
-            (actuator_vel[0])/membrane_base.MOTOR_SPEED,
-            (actuator_vel[1])/membrane_base.MOTOR_SPEED,
-            (actuator_vel[2])/membrane_base.MOTOR_SPEED,
-            (actuator_vel[3])/membrane_base.MOTOR_SPEED,
-            (actuator_vel[4])/membrane_base.MOTOR_SPEED,
+            2*(actuator_vel[0])/membrane_base.MOTOR_SPEED,
+            2*(actuator_vel[1])/membrane_base.MOTOR_SPEED,
+            2*(actuator_vel[2])/membrane_base.MOTOR_SPEED,
+            2*(actuator_vel[3])/membrane_base.MOTOR_SPEED,
+            2*(actuator_vel[4])/membrane_base.MOTOR_SPEED,
         ]
         self.prev_state = state
 
-        assert len(state)==14            
+        assert len(state)==16            
 
         # Rewards
         reward = 0
-        shaping = -200*np.abs(TARGET_POS[1]-object_pos[1])/membrane_base.BOX_HEIGHT - 200*np.abs(TARGET_POS[0]-object_pos[0])/membrane_base.BOX_WIDTH - 10*np.abs(state[2]) + 300*(object_pos[1] - max(actuator_pos))/TARGET_POS[1]
-
-        if (object_pos[1] - max(actuator_pos)) > 4:
-            shaping += 20
+        shaping = \
+        -200*np.abs(self.target_pos[0]-object_pos[0])/membrane_base.BOX_WIDTH  \
+        -200*np.abs(self.target_pos[1]-object_pos[1])/membrane_base.BOX_HEIGHT  \
+        - 50*np.abs(state[2]) \
+        - 50*np.abs(state[3])
         
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
 
+        if (np.abs(object_pos[0] - self.target_pos[0])) < 0.5:
+            if (np.abs(object_pos[1] - self.target_pos[1])) < 0.5:
+                reward += 50
+
         # Reduce reward for using the motor
         for a in action:
-            reward -= 0.05*np.clip(np.abs(a), 0, 1)
+            reward -= 1*np.clip(np.abs(a), 0, 1)
 
-        if np.abs(TARGET_POS[1]-object_pos[1]) < 1 and object_vel[1] < 0.05:
-            reward += 100
         done = False
         
         return np.array(state), reward, done, {}
@@ -191,38 +207,44 @@ class MembraneJump(gym.Env):
             self.viewer = rendering.Viewer(VIEWPORT_W, VIEWPORT_H)
             self.viewer.set_bounds(0, membrane_base.BOX_WIDTH, -membrane_base.BOX_HEIGHT_BELOW_ACTUATORS, membrane_base.BOX_HEIGHT)
 
+        # Target Position Visualized
+        self.viewer.draw_polyline( [(self.target_pos[0], 0), (self.target_pos[0], membrane_base.BOX_HEIGHT)], color=(1,0,0) )
+        self.viewer.draw_polyline( [(0, self.target_pos[1]), (membrane_base.BOX_WIDTH, self.target_pos[1])], color=(1,0,0) )
+
         membrane_base.render_helper(self)
 
-        # Target Position Visualized
-        self.viewer.draw_polyline( [(TARGET_POS[0], 0), (TARGET_POS[0], membrane_base.BOX_HEIGHT)], color=(1,0,0) )
-
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
-    
-    def programmed_policy(self, state):
+
+    def programmed_policy(self,state):
 
         FAST_SPEED = 1;
-        HIGH_SPEED = 0.8;
         MEDIUM_SPEED = 0.5;
         SLOW_SPEED = 0.1;
+        VERY_SLOW_SPEED = 0.05;
 
         ACTUATOR_START = membrane_base.BOX_SIDE_OFFSET
         ACTUATOR_SPACING = membrane_base.GAP
 
-        act_pos = [(membrane_base.BOX_SIDE_OFFSET+membrane_base.GAP*i) for i in range(5)]
+        p = (self.object.position.x-ACTUATOR_START)/ACTUATOR_SPACING
+        
+        q = (self.target_pos[0]-ACTUATOR_START)/ACTUATOR_SPACING
 
-        p = (self.object.position.x-membrane_base.BOX_SIDE_OFFSET)/(membrane_base.GAP)
-        action = -FAST_SPEED*np.ones(5)
+        action = -SLOW_SPEED*np.ones(5)
 
-        if (TARGET_POS[0]-self.object.position.x) > 0:
+        if (self.target_pos[0]-self.object.position.x) > 0:
             #move right
-            action[int(np.ceil(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
-            action[int(np.floor(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
+            action[int(np.floor(p))] = VERY_SLOW_SPEED
+            if int(np.ceil(q)+1) <= 4:
+                action[int(np.ceil(q)+1)] = VERY_SLOW_SPEED
         else:
             #move left
-            action[int(np.floor(p))] = MEDIUM_SPEED + 1.5*np.sin(0.1*self.count)
-            action[int(np.ceil(p))] = HIGH_SPEED + 1.5*np.sin(0.1*self.count)
+            if int(np.ceil(q)-1) >= 0:
+                action[int(np.ceil(q)-1)] = VERY_SLOW_SPEED
+                
+            action[int(np.ceil(p))] = VERY_SLOW_SPEED
+            
         return action
 
 if __name__=="__main__":
-    env = MembraneJump()
+    env = MembraneTarget()
     s = env.reset()
