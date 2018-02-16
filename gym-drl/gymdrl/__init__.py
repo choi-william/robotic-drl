@@ -54,3 +54,11 @@ register(
     max_episode_steps=300,
     reward_threshold=300,
 )
+register(
+    id='HardwareRand-v0',
+    entry_point='gymdrl.envs:MembraneHardwareRand',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
+
+

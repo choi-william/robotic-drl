@@ -6,3 +6,4 @@ from gymdrl.envs.double_joint import DoubleJoint
 from gymdrl.envs.hardware_membrane import MembraneHardware
 from gymdrl.envs.membrane_calibration import MembraneCalibration
 from gymdrl.envs.hardware_simulation import HardwareSimulation
+from gymdrl.envs.hardware_membrane_randtarget import MembraneHardwareRand

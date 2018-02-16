@@ -592,14 +592,14 @@ if __name__ == '__main__':
             # Draw UI
             # OUC
             draw_crosshair(camera_capture, ouc_x, ouc_y, (0, 255, 0), camera_config)
-            draw_crosshair(camera_capture, ouc_top_main[0], ouc_top_main[1], (128, 0, 0), camera_config, 0.5)
-            draw_crosshair(camera_capture, ouc_bottom_main[0], ouc_bottom_main[1], (0, 0, 128), camera_config, 0.5)
+            # draw_crosshair(camera_capture, ouc_top_main[0], ouc_top_main[1], (128, 0, 0), camera_config, 0.5)
+            # draw_crosshair(camera_capture, ouc_bottom_main[0], ouc_bottom_main[1], (0, 0, 128), camera_config, 0.5)
 
             # Actuators
             for i in range(num_actuators):
                 draw_crosshair(camera_capture, actuators_x[i], actuators_y[i], (0, 255, 0), camera_config, 0.5)
-                draw_box(camera_capture, actuator_x1[i], actuator_y1[i], actuator_x2[i], actuator_y2[i],
-                         (128, 128, 0), 2)
+                #draw_box(camera_capture, actuator_x1[i], actuator_y1[i], actuator_x2[i], actuator_y2[i],
+                #         (128, 128, 0), 2)
 
             if r_flag is not None:
                 text = 'Angle: {0.real:.1f}'.format(ouc_angle)
