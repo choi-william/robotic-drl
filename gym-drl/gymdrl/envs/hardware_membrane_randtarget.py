@@ -82,7 +82,7 @@ for i in range(5):
 
 CONFIG_PREFIX = '../gym-drl/gymdrl/envs/camera/'
 CAMERA_CONFIG_FILENAME = CONFIG_PREFIX + 'config/camera_arena.json'
-OUC_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/white_ping.json'
+OUC_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/red_pingpong.json'
 ACTUATOR_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/blue_actuator.json'
 
 # Dont add more noise to hardware for now, can add later to ensure better stability

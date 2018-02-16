@@ -4,7 +4,7 @@
 # Simulations
 from gymdrl.envs.membrane_basket import MembraneBasket
 from gymdrl.envs.membrane_calibration import MembraneCalibration
-from gymdrl.envs.hardware_simulation import HardwareSimulation
+from gymdrl.envs.hardware_membrane import MembraneHardware
 from gymdrl.envs.hardware_membrane_randtarget import MembraneHardwareRand
 from gymdrl.envs.membrane_jump import MembraneJump
 from gymdrl.envs.membrane_order import MembraneOrder
