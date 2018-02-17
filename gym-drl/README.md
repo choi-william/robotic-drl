@@ -33,6 +33,7 @@ OpenAI gym is our reinforcement learning environment testing framework.
 ##### PyBox2D #####
 pyBox2D requires a set of packages to be pre-installed.  
 ```brew install cmake boost boost-python sdl2 swig wget```
+```sudo apt-get install cmake sdlbasic swig wget```
 
 Once the above packages were installed clone the pyBox2D repository and install the package.  
 ```
@@ -55,7 +56,7 @@ Necessary to show simulation visuals
 To install gym-drl, clone the repository and then subsequently install it using pip
 ```
 cd gym-drl
-pip install -e .
+pip3 install --user -e .
 ```
 
 ### Running an Environment ###

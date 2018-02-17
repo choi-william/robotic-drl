@@ -95,11 +95,11 @@ class MembraneTarget(gym.Env):
         #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
         #     membrane_base.BOX_HEIGHT/5
         #     )
-        # object_position = (
-        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
-        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
-        #     )
-        object_position = (membrane_base.BOX_WIDTH/2, 3)
+        object_position = (
+            self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
+            self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
+            )
+        # object_position = (membrane_base.BOX_WIDTH/2, 3)
         self.object = self.world.CreateDynamicBody(
             position = object_position,
             fixtures = object_fixture,
@@ -183,15 +183,20 @@ class MembraneTarget(gym.Env):
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
+        
+        reward = ((-1*np.abs(self.target_pos[0]-object_pos[0]))  +
+        (-1*np.abs(self.target_pos[1]-object_pos[1]) ))
 
+        
         if (np.abs(object_pos[0] - self.target_pos[0])) < 0.5:
             if (np.abs(object_pos[1] - self.target_pos[1])) < 0.5:
-                reward += 50
-
+                reward += 5
+        
         # Reduce reward for using the motor
+        
         for a in action:
             reward -= 1*np.clip(np.abs(a), 0, 1)
-
+        
         done = False
         
         return np.array(state), reward, done, {}
