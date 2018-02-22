@@ -1,7 +1,6 @@
 import gym
 from gym import spaces
 from gym.utils import seeding
-from gym.envs.classic_control import rendering
 
 import numpy as np
 import math
@@ -217,6 +216,7 @@ class MembraneMoveArb(gym.Env):
         return np.array(state), reward, done, {}
 
     def _render(self, mode='human', close=False):
+        from gym.envs.classic_control import rendering
         if close:
             if self.viewer is not None:
                 self.viewer.close()

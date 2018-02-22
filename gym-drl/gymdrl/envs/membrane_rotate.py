@@ -1,7 +1,6 @@
 import gym
 from gym import spaces
 from gym.utils import seeding
-from gym.envs.classic_control import rendering
 
 from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape)
 
@@ -179,6 +178,7 @@ class MembraneRotate(gym.Env):
         return np.array(state), reward, done, {}
 
     def _render(self, mode='human', close=False):
+        from gym.envs.classic_control import rendering
         if close:
             if self.viewer is not None:
                 self.viewer.close()

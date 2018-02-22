@@ -13,9 +13,6 @@ sys.path.append(gymdrl.__file__[:-11] + 'envs') #hacky but necessary
 
 import membrane_base
 
-from gym.envs.classic_control import rendering
-
-
 
 # MEMBRANE BOUNCE ENVIRONMENT
 # 
@@ -184,6 +181,7 @@ class MembraneCalibration(gym.Env):
         return np.array(state), reward, done, {}
 
     def _render(self, mode='human', close=False):
+        from gym.envs.classic_control import rendering
         if close:
             if self.viewer is not None:
                 self.viewer.close()

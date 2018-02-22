@@ -1,8 +1,6 @@
 from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape,
                    b2RevoluteJointDef, b2_pi)
 
-from gym.envs.classic_control import rendering
-
 GRAVITY = -65
 
 ##########################
@@ -171,6 +169,7 @@ def destroy_helper(env_obj):
     env_obj.link_right_list = []
 
 def render_helper(env_obj):
+    from gym.envs.classic_control import rendering
     # Actuator start position visualized
     env_obj.viewer.draw_polyline( [(0, 0), (BOX_WIDTH, 0)], color=(1,0,1) )
 

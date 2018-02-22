@@ -41,7 +41,7 @@ git clone https://github.com/pybox2d/pybox2d
 cd pybox2d/
 python3 setup.py clean
 python3 setup.py build
-python3 setup.py install
+python3 setup.py install --user
 ```
 
 ##### PyGame #####
