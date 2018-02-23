@@ -91,8 +91,12 @@ class MembraneStack(gym.Env):
             restitution = 0.0
             )
         
-        object1_position = (OBJ_SIZE/2+membrane_base.BOX_WIDTH*0.06, OBJ_SIZE/2 + membrane_base.LINK_HEIGHT/2)
-        object2_position = (membrane_base.BOX_WIDTH-OBJ_SIZE/2-membrane_base.BOX_WIDTH*0.06, OBJ_SIZE/2 + membrane_base.LINK_HEIGHT/2)
+        ### Make initial position of objects random. This is similar to how it would be on the robot
+        # object1_position = (OBJ_SIZE/2-membrane_base.BOX_WIDTH*0.06, OBJ_SIZE/2 + membrane_base.LINK_HEIGHT/2) ## Yellow box
+        min_x = membrane_base.BOX_WIDTH*0.06
+        max_x = membrane_base.BOX_WIDTH-OBJ_SIZE/2
+        object1_position = (np.random.uniform()* (max_x - min_x), OBJ_SIZE/2 + membrane_base.LINK_HEIGHT/2) ## Yellow box
+        object2_position = (np.random.uniform()* (max_x - min_x), OBJ_SIZE*1.6 + membrane_base.LINK_HEIGHT/2) ## green box
         self.object1 = self.world.CreateDynamicBody(
             position = object1_position,
             fixtures = object_fixture,
@@ -184,10 +188,12 @@ class MembraneStack(gym.Env):
 
         shaping = -200*np.abs(obj_dist_y)/membrane_base.BOX_HEIGHT -150*np.abs(obj_dist_x)/membrane_base.BOX_WIDTH
         
+        """
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
-
+        """
+        
         # Reduce reward for using the motor
         for a in action:
             reward -= 0.05*np.clip(np.abs(a), 0, 1)
@@ -195,7 +201,7 @@ class MembraneStack(gym.Env):
         done = False
 
         if np.abs(obj_dist_x) < 1.0 and np.abs(obj_dist_y) < 1.0 and np.abs(state[4]) < 0.0001 and np.abs(state[5]) < 0.0001 and np.abs(state[6]) < 0.0001 and np.abs(state[7]) < 0.0001:
-            reward += 100
+            reward += 10
             done = True
 
         return np.array(state), reward, done, {}

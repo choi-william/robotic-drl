@@ -179,9 +179,11 @@ class MembraneTarget(gym.Env):
         - 50*np.abs(state[2]) \
         - 50*np.abs(state[3])
         
+        """
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
+        """
         
         reward = ((-1*np.abs(self.target_pos[0]-object_pos[0]))  +
         (-1*np.abs(self.target_pos[1]-object_pos[1]) ))
@@ -194,7 +196,7 @@ class MembraneTarget(gym.Env):
         # Reduce reward for using the motor
         
         for a in action:
-            reward -= 1*np.clip(np.abs(a), 0, 1)
+            reward -= 0.05*np.clip(np.abs(a), 0, 1)
         
         done = False
         
