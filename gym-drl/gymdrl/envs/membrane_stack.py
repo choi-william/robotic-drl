@@ -122,16 +122,21 @@ class MembraneStack(gym.Env):
             actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
 
         # Move forward one frame
-        self.world.Step(1.0/FPS, 6*30, 2*30)
+        ### Add some magic simulation sauce...
+        substeps = 10
+        solver_iterations=10
+        for step in range(substeps):
+            self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
         # Required values to be acquired from the platform
+        noise_adjust = 0.0001
         object1_pos = [
-            np.random.normal(self.object1.position.x, OBJ_POS_STDDEV),
-            np.random.normal(self.object1.position.y, OBJ_POS_STDDEV)
+            np.random.normal(self.object1.position.x, OBJ_POS_STDDEV*noise_adjust),
+            np.random.normal(self.object1.position.y, OBJ_POS_STDDEV*noise_adjust)
             ]
         object2_pos = [
-            np.random.normal(self.object2.position.x, OBJ_POS_STDDEV),
-            np.random.normal(self.object2.position.y, OBJ_POS_STDDEV)
+            np.random.normal(self.object2.position.x, OBJ_POS_STDDEV*noise_adjust),
+            np.random.normal(self.object2.position.y, OBJ_POS_STDDEV*noise_adjust)
             ]
         object1_vel = [
             self.object1.linearVelocity.x,
@@ -141,13 +146,15 @@ class MembraneStack(gym.Env):
             self.object2.linearVelocity.x,
             self.object2.linearVelocity.y
             ]
+        # print("ACTUATOR_POS_STDDEV: ", ACTUATOR_POS_STDDEV,  " OBJ_POS_STDDEV: ", OBJ_POS_STDDEV*noise_adjust)
         actuator_pos = [
-            np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[2].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[3].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[4].position.y, ACTUATOR_POS_STDDEV)
+            np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[2].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[3].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[4].position.y, ACTUATOR_POS_STDDEV*noise_adjust)
             ]
+        
         actuator_vel = [
             self.actuator_list[0].linearVelocity.y,
             self.actuator_list[1].linearVelocity.y,
@@ -184,7 +191,9 @@ class MembraneStack(gym.Env):
 
         # distance between the objects
         obj_dist_x = object2_pos[0] - object1_pos[0]
-        obj_dist_y = object2_pos[1] - object1_pos[1] - OBJ_SIZE
+        obj_dist_y = object2_pos[1] - object1_pos[1]
+        reward = ((-1*np.abs(object2_pos[0]-object1_pos[0]))  +
+                  (-1*np.abs(object2_pos[1]-object1_pos[1]) ))
 
         shaping = -200*np.abs(obj_dist_y)/membrane_base.BOX_HEIGHT -150*np.abs(obj_dist_x)/membrane_base.BOX_WIDTH
         
@@ -200,7 +209,17 @@ class MembraneStack(gym.Env):
 
         done = False
 
-        if np.abs(obj_dist_x) < 1.0 and np.abs(obj_dist_y) < 1.0 and np.abs(state[4]) < 0.0001 and np.abs(state[5]) < 0.0001 and np.abs(state[6]) < 0.0001 and np.abs(state[7]) < 0.0001:
+        ## stacked in motion
+        if (np.abs(obj_dist_x) < 2.0 and np.abs(obj_dist_y) < 4.2 ## positions
+            # and np.abs(state[4]) < 0.01 and np.abs(state[5]) < 0.01 ## velocities 
+            # and np.abs(state[6]) < 0.01 and np.abs(state[7]) < 0.01
+            ):
+            reward += 2 - np.abs(obj_dist_x)
+            
+        ### Stacked at rest
+        if (np.abs(obj_dist_x) < 1.5 and np.abs(obj_dist_y) < 4.2 ## positions
+            and np.abs(state[4]) < 0.01 and np.abs(state[5]) < 0.01 ## velocities 
+            and np.abs(state[6]) < 0.01 and np.abs(state[7]) < 0.01):
             reward += 10
             done = True
 

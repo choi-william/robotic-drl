@@ -122,23 +122,29 @@ class MembraneTarget(gym.Env):
             actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
 
         # Move forward one frame
-        self.world.Step(1.0/FPS, 6*30, 2*30)
+        ### Add some magic simulation sauce...
+        substeps = 10
+        solver_iterations=10
+        for step in range(substeps):
+            self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
         # Required values to be acquired from the platform
+        noise_adjust = 1.0
         object_pos = [
-            np.random.normal(self.object.position.x, OBJ_POS_STDDEV),
-            np.random.normal(self.object.position.y, OBJ_POS_STDDEV)
+            np.random.normal(self.object.position.x, OBJ_POS_STDDEV*noise_adjust),
+            np.random.normal(self.object.position.y, OBJ_POS_STDDEV*noise_adjust)
             ]
         object_vel = [
             self.object.linearVelocity.x,
             self.object.linearVelocity.y
             ]
+        # print("ACTUATOR_POS_STDDEV: ", ACTUATOR_POS_STDDEV)
         actuator_pos = [
-            np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[2].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[3].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[4].position.y, ACTUATOR_POS_STDDEV)
+            np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[2].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[3].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[4].position.y, ACTUATOR_POS_STDDEV*noise_adjust)
             ]
         actuator_vel = [
             self.actuator_list[0].linearVelocity.y,
