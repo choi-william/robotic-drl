@@ -57,6 +57,8 @@ def init_helper(env_obj):
 
 def reset_helper(env_obj):
 
+    # fake_random_pos = [0, 1, 2, 3, 4]
+    fake_random_pos = [0, 0, 0, 0, 0]
     # Creating the Exterior Box that defines the 2D Plane
     env_obj.exterior_box = env_obj.world.CreateStaticBody(
         position = (0, 0),
@@ -76,7 +78,7 @@ def reset_helper(env_obj):
 
     for i in range(5):
         actuator = env_obj.world.CreateDynamicBody(
-            position = (BOX_SIDE_OFFSET+GAP*i,0),
+            position = (BOX_SIDE_OFFSET+GAP*i,fake_random_pos[i]),
             fixtures = actuator_fixture
             )
         actuator.color1 = (0,0,0.5)
@@ -109,16 +111,17 @@ def reset_helper(env_obj):
         )
 
     for i in range(4):
+        left_height = fake_random_pos[i]
         link_left = env_obj.world.CreateDynamicBody(
-            position = (BOX_SIDE_OFFSET+(GAP*i+LINK_WIDTH/2),0),
+            position = (BOX_SIDE_OFFSET+(GAP*i+LINK_WIDTH/2),left_height),
             fixtures = link_fixture
             )
         link_left.color1 = (0,1,1)
         link_left.color2 = (1,0,1)
         env_obj.link_left_list.append(link_left)
-
+        right_height = fake_random_pos[i+1]
         link_right = env_obj.world.CreateDynamicBody(
-            position = (BOX_SIDE_OFFSET+(GAP*(i+1)-LINK_WIDTH/2),0),
+            position = (BOX_SIDE_OFFSET+(GAP*(i+1)-LINK_WIDTH/2),right_height),
             fixtures = link_fixture
             )
         link_right.color1 = (0,1,1)
@@ -142,7 +145,7 @@ def reset_helper(env_obj):
         joint_middle = env_obj.world.CreatePrismaticJoint(
             bodyA = link_left,
             bodyB = link_right,
-            anchor = (link_right.position.x-(LINK_WIDTH/2+LINK_HEIGHT/2), link_right.position.y),
+            anchor = (link_right.position.x-(LINK_WIDTH/2+LINK_HEIGHT/2), (link_left.position.y+link_right.position.y)/2.0),
             axis = (1,0),
             lowerTranslation = 0,
             upperTranslation = UPPER_TRANSLATION_MIDDLE_JOINT,

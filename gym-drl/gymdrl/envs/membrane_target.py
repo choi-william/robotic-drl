@@ -129,7 +129,7 @@ class MembraneTarget(gym.Env):
             self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
         # Required values to be acquired from the platform
-        noise_adjust = 1.0
+        noise_adjust = 0.01
         object_pos = [
             np.random.normal(self.object.position.x, OBJ_POS_STDDEV*noise_adjust),
             np.random.normal(self.object.position.y, OBJ_POS_STDDEV*noise_adjust)
@@ -190,19 +190,15 @@ class MembraneTarget(gym.Env):
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
         """
-        
-        reward = ((-1*np.abs(self.target_pos[0]-object_pos[0]))  +
-        (-1*np.abs(self.target_pos[1]-object_pos[1]) ))
-
+        reward = ((-1*np.square(self.target_pos[0]-object_pos[0]))  +
+        (-1*np.square(self.target_pos[1]-object_pos[1]) ))
         
         if (np.abs(object_pos[0] - self.target_pos[0])) < 0.5:
             if (np.abs(object_pos[1] - self.target_pos[1])) < 0.5:
                 reward += 5
-        
+
         # Reduce reward for using the motor
-        
-        for a in action:
-            reward -= 0.05*np.clip(np.abs(a), 0, 1)
+        reward -= 2.0*np.mean(np.clip(np.abs(action), 0, 1))
         
         done = False
         

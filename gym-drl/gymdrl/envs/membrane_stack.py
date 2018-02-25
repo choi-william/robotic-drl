@@ -129,7 +129,7 @@ class MembraneStack(gym.Env):
             self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
         # Required values to be acquired from the platform
-        noise_adjust = 0.0001
+        noise_adjust = 0.01
         object1_pos = [
             np.random.normal(self.object1.position.x, OBJ_POS_STDDEV*noise_adjust),
             np.random.normal(self.object1.position.y, OBJ_POS_STDDEV*noise_adjust)
