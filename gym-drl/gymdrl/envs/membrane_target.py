@@ -79,8 +79,23 @@ class MembraneTarget(gym.Env):
     def _reset(self):
         self._destroy()
         membrane_base.reset_helper(self)
+        
+        ### Give membrane random init state
+        import numpy as np
+        # fake_random_pos = np.array([0, 0.25, 0.5, 0.75, 1])*0.1
+        fake_random_pos = np.random.uniform(size=5)*0.1
+        for i, actuator in enumerate(self.actuator_list):
+            actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(fake_random_pos[i], -1, 1))
+        
+        ### Add some magic simulation sauce...
+        substeps = 10
+        solver_iterations=10
+        for st in range(25): ### should be half of FPS
+            for step in range(substeps):
+                self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
-        self.target_pos = [np.random.rand()*(membrane_base.BOX_WIDTH-membrane_base.OBJ_SIZE)+membrane_base.OBJ_SIZE/2,5]
+        self.target_pos = [np.random.rand()*(membrane_base.BOX_WIDTH-membrane_base.OBJ_SIZE)+membrane_base.OBJ_SIZE/2,
+                           self.np_random.uniform(membrane_base.OBJ_POS_OFFSET*1.0,membrane_base.OBJ_POS_OFFSET*3.0)]
         
         # Creating the object to manipulate
         object_fixture = b2FixtureDef(
@@ -96,7 +111,7 @@ class MembraneTarget(gym.Env):
         #     )
         object_position = (
             self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
-            self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
+            self.np_random.uniform(membrane_base.OBJ_POS_OFFSET*2.0,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
             )
         # object_position = (membrane_base.BOX_WIDTH/2, 3)
         self.object = self.world.CreateDynamicBody(
