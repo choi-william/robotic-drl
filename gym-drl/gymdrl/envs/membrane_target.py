@@ -88,8 +88,8 @@ class MembraneTarget(gym.Env):
             actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(fake_random_pos[i], -1, 1))
         
         ### Add some magic simulation sauce...
-        substeps = 10
-        solver_iterations=10
+        substeps = 1
+        solver_iterations=1
         for st in range(25): ### should be half of FPS
             for step in range(substeps):
                 self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
@@ -144,7 +144,7 @@ class MembraneTarget(gym.Env):
             self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
         # Required values to be acquired from the platform
-        noise_adjust = 0.01
+        noise_adjust = 0.2
         object_pos = [
             np.random.normal(self.object.position.x, OBJ_POS_STDDEV*noise_adjust),
             np.random.normal(self.object.position.y, OBJ_POS_STDDEV*noise_adjust)
@@ -153,7 +153,7 @@ class MembraneTarget(gym.Env):
             self.object.linearVelocity.x,
             self.object.linearVelocity.y
             ]
-        # print("ACTUATOR_POS_STDDEV: ", ACTUATOR_POS_STDDEV)
+        # print("ACTUATOR_POS_STDDEV: ", ACTUATOR_POS_STDDEV*noise_adjust)
         actuator_pos = [
             np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
             np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
