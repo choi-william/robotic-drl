@@ -80,10 +80,14 @@ for i in range(5):
     ACTUATOR_Y1[i] = 0
     ACTUATOR_Y2[i] = CAMERA_CONFIG.frame_height
 
-CONFIG_PREFIX = '../gym-drl/gymdrl/envs/camera/'
+# CONFIG_PREFIX = '../gym-drl/gymdrl/envs/camera/'
+CONFIG_PREFIX = '/home/gberseth/playground/robotic-ai/gym-drl/gymdrl/envs/camera/'
 CAMERA_CONFIG_FILENAME = CONFIG_PREFIX + 'config/camera_arena.json'
+print ("CAMERA_CONFIG_FILENAME: ", CAMERA_CONFIG_FILENAME)
 OUC_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/red_pingpong.json'
+print ("OUC_PARAMS_FILENAME: ", OUC_PARAMS_FILENAME)
 ACTUATOR_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/blue_actuator.json'
+print ("ACTUATOR_PARAMS_FILENAME: ", ACTUATOR_PARAMS_FILENAME)
 
 # Dont add more noise to hardware for now, can add later to ensure better stability
 # ####################
@@ -119,8 +123,11 @@ class MembraneHardwareRand(gym.Env):
         self.prev_state = None
         # Load camera config
         try:
+            print ("CAMERA_CONFIG_FILENAME: ", CAMERA_CONFIG_FILENAME)
             f_cam_conf = open(CAMERA_CONFIG_FILENAME, 'r')
+            print("Opened camera config file")
             CAMERA_CONFIG.from_dict(json.load(f_cam_conf))
+            print("Parsed camera config file")
             f_cam_conf.close()
             print('Loaded camera config from \'' + CAMERA_CONFIG_FILENAME + '\'')
         except IOError:
@@ -355,14 +362,18 @@ class MembraneHardwareRand(gym.Env):
             - 200 * np.abs(TARGET_POS[1] - ouc_y) / BOX_HEIGHT \
             - 50 * np.abs(state[4]) \
             - 50 * np.abs(state[5])
-
+        """
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
-
+        """
+        reward = ((-1*np.square(TARGET_POS[0]-ouc_x))/BOX_WIDTH  +
+        (-1*np.square(TARGET_POS[1]-ouc_y) )/BOX_WIDTH)
+        
+        
         if (np.abs(ouc_x - TARGET_POS[0])) < 15:
             if (np.abs(ouc_y - TARGET_POS[1])) < 15:
-                reward += 50
+                reward += 5
         # Reduce reward for using the motor
         for a in action:
             reward -= 1 * np.clip(np.abs(a), 0, 1)

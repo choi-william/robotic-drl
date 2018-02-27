@@ -15,3 +15,6 @@ pushd pybox2d/
 popd
 pip3 install pygame
 pip3 install --user -e .
+pip3 install --user opencv-python
+pip3 install --user pyserial
+
