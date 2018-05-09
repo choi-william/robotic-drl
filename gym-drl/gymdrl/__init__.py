@@ -72,3 +72,15 @@ register(
     max_episode_steps=300,
     reward_threshold=300,
 )
+register(
+    id='HardwareClick-v0',
+    entry_point='gymdrl.envs:MembraneHardwareClick',
+    max_episode_steps=300,
+    reward_threshold=300,
+)
+register(
+    id='HardwareRandPoscontrol-v0',
+    entry_point='gymdrl.envs:MembraneHardwareRandPoscontrol',
+    max_episode_steps=300,
+    reward_threshold=300,
+)

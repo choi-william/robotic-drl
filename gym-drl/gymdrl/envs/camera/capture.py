@@ -8,7 +8,7 @@ import time
 epsilon = 1e-4
 max_objects = 10
 num_actuators = 5
-
+target_click_pos = [320, 80]
 
 class CameraConfig:
     camera_port = 1
@@ -328,6 +328,11 @@ def track_objects(img, track_params, show_opening=False):
     return object_list
 
 
+def click_target(event, x, y, flags, param):
+    global target_click_pos
+    if event == cv2.EVENT_LBUTTONDOWN:
+        target_click_pos = [x, y]
+
 #
 # Main
 #
@@ -358,10 +363,10 @@ if __name__ == '__main__':
     # args.setdefault('--ouc_top_params', 'tracking/paper_blue.json')
     # args.setdefault('--ouc_bottom_params', 'tracking/paper_red.json')
     # args.setdefault('--actuator_params', 'tracking/paper_purple.json')
-    args.setdefault('--ouc_params', 'tracking/red_pingpong.json')
+    args.setdefault('--ouc_params', 'tracking/white_pingpong.json')
     args.setdefault('--ouc_top_params', 'tracking/green_block_top.json')
     args.setdefault('--ouc_bottom_params', 'tracking/red_block_bottom.json')
-    args.setdefault('--actuator_params', 'tracking/blue_actuator.json')
+    args.setdefault('--actuator_params', 'tracking/blue_actuator2.json')
 
     camera_config = CameraConfig()
     try:

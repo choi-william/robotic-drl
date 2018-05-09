@@ -6,6 +6,8 @@ from gymdrl.envs.membrane_basket import MembraneBasket
 from gymdrl.envs.membrane_calibration import MembraneCalibration
 from gymdrl.envs.hardware_membrane import MembraneHardware
 from gymdrl.envs.hardware_membrane_randtarget import MembraneHardwareRand
+from gymdrl.envs.hardware_membrane_clicktarget import MembraneHardwareClick
+from gymdrl.envs.hardware_membrane_randtarget_poscontrol import MembraneHardwareRandPoscontrol
 from gymdrl.envs.membrane_jump import MembraneJump
 from gymdrl.envs.membrane_order import MembraneOrder
 from gymdrl.envs.membrane_rotate import MembraneRotate
