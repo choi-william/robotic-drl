@@ -1,8 +1,6 @@
 from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape,
                    b2RevoluteJointDef, b2_pi)
 
-from gym.envs.classic_control import rendering
-
 GRAVITY = -65
 
 ##########################
@@ -118,7 +116,6 @@ def reset_helper(env_obj):
         link_left.color1 = (0,1,1)
         link_left.color2 = (1,0,1)
         env_obj.link_left_list.append(link_left)
-
         link_right = env_obj.world.CreateDynamicBody(
             position = (BOX_SIDE_OFFSET+(GAP*(i+1)-LINK_WIDTH/2),0),
             fixtures = link_fixture
@@ -144,7 +141,7 @@ def reset_helper(env_obj):
         joint_middle = env_obj.world.CreatePrismaticJoint(
             bodyA = link_left,
             bodyB = link_right,
-            anchor = (link_right.position.x-(LINK_WIDTH/2+LINK_HEIGHT/2), link_right.position.y),
+            anchor = (link_right.position.x-(LINK_WIDTH/2+LINK_HEIGHT/2), (link_left.position.y+link_right.position.y)/2.0),
             axis = (1,0),
             lowerTranslation = 0,
             upperTranslation = UPPER_TRANSLATION_MIDDLE_JOINT,
@@ -152,7 +149,7 @@ def reset_helper(env_obj):
             )
     # Adding linkages to the drawlist
     env_obj.drawlist = env_obj.link_left_list + env_obj.link_right_list + env_obj.drawlist
-
+    
 
 def destroy_helper(env_obj):
     env_obj.world.DestroyBody(env_obj.exterior_box)
@@ -171,6 +168,7 @@ def destroy_helper(env_obj):
     env_obj.link_right_list = []
 
 def render_helper(env_obj):
+    from gym.envs.classic_control import rendering
     # Actuator start position visualized
     env_obj.viewer.draw_polyline( [(0, 0), (BOX_WIDTH, 0)], color=(1,0,1) )
 

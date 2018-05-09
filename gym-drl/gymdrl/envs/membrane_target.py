@@ -1,7 +1,6 @@
 import gym
 from gym import spaces
 from gym.utils import seeding
-from gym.envs.classic_control import rendering
 
 from Box2D import (b2World, b2CircleShape, b2FixtureDef, b2LoopShape, b2PolygonShape)
 
@@ -80,8 +79,23 @@ class MembraneTarget(gym.Env):
     def _reset(self):
         self._destroy()
         membrane_base.reset_helper(self)
+        
+        ### Give membrane random init state
+        import numpy as np
+        # fake_random_pos = np.array([0, 0.25, 0.5, 0.75, 1])*0.1
+        fake_random_pos = np.random.uniform(size=5)*0.1
+        for i, actuator in enumerate(self.actuator_list):
+            actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(fake_random_pos[i], -1, 1))
+        
+        ### Add some magic simulation sauce...
+        substeps = 1
+        solver_iterations=1
+        for st in range(25): ### should be half of FPS
+            for step in range(substeps):
+                self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
-        self.target_pos = [np.random.rand()*(membrane_base.BOX_WIDTH-membrane_base.OBJ_SIZE)+membrane_base.OBJ_SIZE/2,5]
+        self.target_pos = [np.random.rand()*(membrane_base.BOX_WIDTH-membrane_base.OBJ_SIZE)+membrane_base.OBJ_SIZE/2,
+                           self.np_random.uniform(membrane_base.OBJ_POS_OFFSET*1.0,membrane_base.OBJ_POS_OFFSET*3.0)]
         
         # Creating the object to manipulate
         object_fixture = b2FixtureDef(
@@ -95,11 +109,11 @@ class MembraneTarget(gym.Env):
         #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
         #     membrane_base.BOX_HEIGHT/5
         #     )
-        # object_position = (
-        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
-        #     self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
-        #     )
-        object_position = (membrane_base.BOX_WIDTH/2, 3)
+        object_position = (
+            self.np_random.uniform(membrane_base.OBJ_POS_OFFSET,membrane_base.BOX_WIDTH-membrane_base.OBJ_POS_OFFSET),
+            self.np_random.uniform(membrane_base.OBJ_POS_OFFSET*2.0,membrane_base.BOX_HEIGHT-membrane_base.OBJ_POS_OFFSET)
+            )
+        # object_position = (membrane_base.BOX_WIDTH/2, 3)
         self.object = self.world.CreateDynamicBody(
             position = object_position,
             fixtures = object_fixture,
@@ -123,23 +137,29 @@ class MembraneTarget(gym.Env):
             actuator.joint.motorSpeed = float(membrane_base.MOTOR_SPEED * np.clip(action[i], -1, 1))
 
         # Move forward one frame
-        self.world.Step(1.0/FPS, 6*30, 2*30)
+        ### Add some magic simulation sauce...
+        substeps = 10
+        solver_iterations=10
+        for step in range(substeps):
+            self.world.Step((1.0/FPS) * (1.0/substeps), 6*solver_iterations, 2*solver_iterations)
 
         # Required values to be acquired from the platform
+        noise_adjust = 0.2
         object_pos = [
-            np.random.normal(self.object.position.x, OBJ_POS_STDDEV),
-            np.random.normal(self.object.position.y, OBJ_POS_STDDEV)
+            np.random.normal(self.object.position.x, OBJ_POS_STDDEV*noise_adjust),
+            np.random.normal(self.object.position.y, OBJ_POS_STDDEV*noise_adjust)
             ]
         object_vel = [
             self.object.linearVelocity.x,
             self.object.linearVelocity.y
             ]
+        # print("ACTUATOR_POS_STDDEV: ", ACTUATOR_POS_STDDEV*noise_adjust)
         actuator_pos = [
-            np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[2].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[3].position.y, ACTUATOR_POS_STDDEV),
-            np.random.normal(self.actuator_list[4].position.y, ACTUATOR_POS_STDDEV)
+            np.random.normal(self.actuator_list[0].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[1].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[2].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[3].position.y, ACTUATOR_POS_STDDEV*noise_adjust),
+            np.random.normal(self.actuator_list[4].position.y, ACTUATOR_POS_STDDEV*noise_adjust)
             ]
         actuator_vel = [
             self.actuator_list[0].linearVelocity.y,
@@ -180,23 +200,27 @@ class MembraneTarget(gym.Env):
         - 50*np.abs(state[2]) \
         - 50*np.abs(state[3])
         
+        """
         if self.prev_shaping is not None:
             reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
-
+        """
+        reward = ((-1*np.square(self.target_pos[0]-object_pos[0]))  +
+        (-1*np.square(self.target_pos[1]-object_pos[1]) ))
+        
         if (np.abs(object_pos[0] - self.target_pos[0])) < 0.5:
             if (np.abs(object_pos[1] - self.target_pos[1])) < 0.5:
-                reward += 50
+                reward += 5
 
         # Reduce reward for using the motor
-        for a in action:
-            reward -= 1*np.clip(np.abs(a), 0, 1)
-
+        reward -= 2.0*np.mean(np.clip(np.abs(action), 0, 1))
+        
         done = False
         
         return np.array(state), reward, done, {}
 
     def _render(self, mode='human', close=False):
+        from gym.envs.classic_control import rendering
         if close:
             if self.viewer is not None:
                 self.viewer.close()

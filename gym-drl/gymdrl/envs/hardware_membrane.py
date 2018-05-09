@@ -80,7 +80,8 @@ for i in range(5):
     ACTUATOR_Y1[i] = 0
     ACTUATOR_Y2[i] = CAMERA_CONFIG.frame_height
 
-CONFIG_PREFIX = '../gym-drl/gymdrl/envs/camera/'
+# CONFIG_PREFIX = '../gym-drl/gymdrl/envs/camera/'
+CONFIG_PREFIX = '/home/gberseth/playground/robotic-ai/gym-drl/gymdrl/envs/camera/'
 CAMERA_CONFIG_FILENAME = CONFIG_PREFIX + 'config/camera_arena.json'
 OUC_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/red_pingpong.json'
 ACTUATOR_PARAMS_FILENAME = CONFIG_PREFIX + 'tracking/blue_actuator.json'

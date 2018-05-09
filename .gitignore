@@ -6,3 +6,4 @@ algorithm/__pycache__/
 gym-drl/gymdrl/envs/camera/output/
 gym-drl/gymdrl/envs/camera/test*.png
 gym-drl/gymdrl/envs/camera/capture*.png
+gymdrl.egg-info/
