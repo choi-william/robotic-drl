@@ -363,7 +363,7 @@ if __name__ == '__main__':
     # args.setdefault('--ouc_top_params', 'tracking/paper_blue.json')
     # args.setdefault('--ouc_bottom_params', 'tracking/paper_red.json')
     # args.setdefault('--actuator_params', 'tracking/paper_purple.json')
-    args.setdefault('--ouc_params', 'tracking/white_pingpong.json')
+    args.setdefault('--ouc_params', 'tracking/orange_pingpong.json')
     args.setdefault('--ouc_top_params', 'tracking/green_block_top.json')
     args.setdefault('--ouc_bottom_params', 'tracking/red_block_bottom.json')
     args.setdefault('--actuator_params', 'tracking/blue_actuator2.json')
